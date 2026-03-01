@@ -2,96 +2,207 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Condomínio Rua Glaziou 30</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Recibos — Condomínio Rua Glaziou, 30</title>
 
-  <link rel="stylesheet" href="style.css">
-
-  <!-- Chart.js -->
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <link rel="stylesheet" href="style.css" />
 
   <!-- jsPDF -->
   <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
 </head>
 
 <body>
+  <header class="topbar">
+    <div>
+      <h1>Recibo — Condomínio Rua Glaziou, 30</h1>
+      <p class="muted">Preencha, gere o PDF e dê baixa com organização.</p>
+    </div>
+  </header>
 
-  <h1>Condomínio - Rua Glaziou, 30</h1>
+  <main class="layout">
+    <!-- ====== LATERAL (pequena) ====== -->
+    <aside class="sidebar">
+      <button class="sidebtn active" data-tab="recibo">Recibo</button>
+      <button class="sidebtn" data-tab="historico">Histórico</button>
+      <button class="sidebtn" data-tab="assinatura">Assinatura</button>
+    </aside>
 
-  <nav>
-    <button onclick="mostrarAba('recibo')">Recibo</button>
-    <button onclick="mostrarAba('pagamentos')">Pagamentos</button>
-    <button onclick="mostrarAba('agua')">Água por Bloco</button>
-    <button onclick="mostrarAba('manutencao')">Manutenção</button>
-  </nav>
+    <!-- ====== CONTEÚDO ====== -->
+    <section class="content">
 
-  <!-- ================= RECIBO ================= -->
-  <section id="recibo" class="aba">
-    <h2>Gerar Recibo</h2>
+      <!-- =================== RECIBO =================== -->
+      <div class="panel" id="tab-recibo">
+        <div class="grid">
+          <div class="card">
+            <h2>Dados do recibo</h2>
 
-    <label>Nº Recibo</label>
-    <input type="text" id="numeroRecibo">
+            <div class="row">
+              <div class="field">
+                <label>Nº do recibo</label>
+                <div class="inline">
+                  <input id="recNumero" type="text" placeholder="Clique em Próximo" />
+                  <button class="btn small" id="btnProximo">Próximo</button>
+                </div>
+                <small class="muted">Numeração automática (salva no navegador).</small>
+              </div>
 
-    <label>Valor (R$)</label>
-    <input type="text" id="valorRecibo">
+              <div class="field">
+                <label>Apartamento</label>
+                <select id="recApto"></select>
+              </div>
+            </div>
 
-    <label>Recebido de</label>
-    <input type="text" id="recebidoDe">
+            <div class="row">
+              <div class="field">
+                <label>Recebido de (nome)</label>
+                <input id="recNome" type="text" placeholder="Ex: Maria Silva" />
+                <small class="muted">Você só digita o nome. O apto é selecionado acima.</small>
+              </div>
+            </div>
 
-    <label>Apartamento</label>
-    <select id="apartamento">
-      <option>101</option>
-      <option>101 Fundos</option>
-      <option>201</option>
-      <option>201 Sala</option>
-      <option>201 Fundos</option>
-      <option>301</option>
-      <option>301 Sala</option>
-      <option>301 Fundos</option>
-    </select>
+            <div class="row">
+              <div class="field">
+                <label>Referente ao mês</label>
+                <select id="recMesRef"></select>
+              </div>
+              <div class="field">
+                <label>Ano de referência</label>
+                <input id="recAnoRef" type="number" min="2000" max="2100" />
+              </div>
+            </div>
 
-    <label>Referente a</label>
-    <input type="text" id="referente">
+            <h3>O que foi pago</h3>
+            <div class="row">
+              <div class="check">
+                <input type="checkbox" id="ckCondo" checked />
+                <label for="ckCondo">Condomínio</label>
+              </div>
+              <div class="check">
+                <input type="checkbox" id="ckAgua" />
+                <label for="ckAgua">Água</label>
+              </div>
+            </div>
 
-    <button onclick="gerarPDF()">Gerar PDF</button>
-  </section>
+            <div class="row">
+              <div class="field">
+                <label>Valor Condomínio (R$)</label>
+                <input id="recValorCondo" type="text" inputmode="decimal" placeholder="Ex: 160,00" />
+              </div>
+              <div class="field">
+                <label>Valor Água (R$)</label>
+                <input id="recValorAgua" type="text" inputmode="decimal" placeholder="Ex: 80,00" />
+              </div>
+            </div>
 
-  <!-- ================= PAGAMENTOS ================= -->
-  <section id="pagamentos" class="aba" style="display:none;">
-    <h2>Registro de Pagamentos</h2>
+            <div class="row">
+              <div class="field">
+                <label>Total recebido (automático)</label>
+                <input id="recTotal" type="text" readonly />
+              </div>
+            </div>
 
-    <canvas id="graficoPagamentos"></canvas>
-  </section>
+            <h3>Data de emissão</h3>
+            <div class="row">
+              <div class="field">
+                <label>Dia</label>
+                <select id="recDia"></select>
+              </div>
+              <div class="field">
+                <label>Mês</label>
+                <select id="recMesEmissao"></select>
+              </div>
+              <div class="field">
+                <label>Ano</label>
+                <input id="recAnoEmissao" type="number" min="2000" max="2100" />
+              </div>
+            </div>
 
-  <!-- ================= ÁGUA ================= -->
-  <section id="agua" class="aba" style="display:none;">
-    <h2>Divisão de Água</h2>
+            <div class="row">
+              <button class="btn" id="btnGerarPDF">Gerar PDF</button>
+              <button class="btn ghost" id="btnSalvarHist">Salvar no histórico</button>
+            </div>
 
-    <label>Valor Bloco 1</label>
-    <input type="number" id="bloco1">
+            <div class="fixedinfo">
+              <div><b>Endereço:</b> Rua Glaziou, 30 — <span id="txtApto"></span></div>
+              <div><b>Cidade:</b> Rio de Janeiro</div>
+              <div><b>Emitente:</b> Gabriel Brito Cirilo</div>
+            </div>
+          </div>
 
-    <label>Valor Bloco 2</label>
-    <input type="number" id="bloco2">
+          <div class="card">
+            <h2>Prévia do recibo</h2>
+            <div class="preview" id="recPreview"></div>
+            <small class="muted">
+              A assinatura sai no PDF se você enviar na aba “Assinatura”.
+            </small>
+          </div>
+        </div>
+      </div>
 
-    <button onclick="calcularAgua()">Calcular</button>
+      <!-- =================== HISTÓRICO =================== -->
+      <div class="panel hidden" id="tab-historico">
+        <div class="card">
+          <h2>Histórico de recibos</h2>
+          <p class="muted">Aqui fica salvo o que você registrar no navegador.</p>
 
-    <div id="resultadoAgua"></div>
-  </section>
+          <div class="tablewrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Nº</th>
+                  <th>Ref.</th>
+                  <th>Apto</th>
+                  <th>Nome</th>
+                  <th>Condomínio</th>
+                  <th>Água</th>
+                  <th>Total</th>
+                  <th>Emissão</th>
+                  <th>Ações</th>
+                </tr>
+              </thead>
+              <tbody id="tbodyHist"></tbody>
+            </table>
+          </div>
 
-  <!-- ================= MANUTENÇÃO ================= -->
-  <section id="manutencao" class="aba" style="display:none;">
-    <h2>Relatório de Manutenção</h2>
+          <div class="row">
+            <button class="btn danger" id="btnLimparHist">Limpar histórico</button>
+          </div>
+        </div>
+      </div>
 
-    <label>Descrição</label>
-    <input type="text" id="descricaoManut">
+      <!-- =================== ASSINATURA =================== -->
+      <div class="panel hidden" id="tab-assinatura">
+        <div class="grid">
+          <div class="card">
+            <h2>Assinatura no PDF</h2>
+            <p class="muted">Envie uma imagem (PNG/JPG) com sua assinatura para aparecer no PDF.</p>
 
-    <label>Valor</label>
-    <input type="number" id="valorManut">
+            <label class="btn filebtn">
+              Enviar assinatura
+              <input type="file" id="sigFile" accept="image/*" />
+            </label>
 
-    <button onclick="adicionarManutencao()">Adicionar</button>
+            <div class="row">
+              <button class="btn ghost" id="btnRemoverSig">Remover assinatura</button>
+            </div>
+          </div>
 
-    <canvas id="graficoManut"></canvas>
-  </section>
+          <div class="card">
+            <h2>Prévia</h2>
+            <div class="sigbox">
+              <img id="sigPreview" alt="Assinatura" />
+            </div>
+            <small class="muted">Emitente fixo: Gabriel Brito Cirilo</small>
+          </div>
+        </div>
+      </div>
+
+    </section>
+  </main>
+
+  <footer class="footer">
+    <span>Rua Glaziou, 30 — Rio de Janeiro • Emitente: Gabriel Brito Cirilo</span>
+  </footer>
 
   <script src="app.js"></script>
 </body>
