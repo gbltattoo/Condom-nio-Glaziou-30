@@ -6,17 +6,6 @@ const MESES = [
   "Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"
 ];
 
-const APTOS = [
-  "101",
-  "101 Fundos",
-  "201",
-  "201 Sala",
-  "201 Fundos",
-  "301",
-  "301 Sala",
-  "301 Fundos"
-];
-
 const FIXOS = {
   endereco: "Rua Glaziou, 30",
   cidade: "Rio de Janeiro",
@@ -24,9 +13,9 @@ const FIXOS = {
 };
 
 const STORAGE = {
-  seq: "glaziou30_recibo_seq",
-  hist: "glaziou30_recibo_hist",
-  sig: "glaziou30_assinatura_base64"
+  seq: "glaziou30_recibo_seq_v2",
+  recibos: "glaziou30_recibos_v2",
+  despesas: "glaziou30_despesas_v2"
 };
 
 /* =========================
@@ -60,50 +49,17 @@ function loadJSON(key, fallback){
   }
 }
 
-function getSig(){
-  return localStorage.getItem(STORAGE.sig) || "";
+function uid(){
+  return `id_${Date.now()}_${Math.random().toString(16).slice(2)}`;
 }
 
-function todayParts(){
+function today(){
   const d = new Date();
   return { dia:d.getDate(), mes:d.getMonth(), ano:d.getFullYear() };
 }
 
 /* =========================
-   UI INIT
-========================= */
-function fillSelect(el, items){
-  el.innerHTML = "";
-  for(const it of items){
-    const opt = document.createElement("option");
-    opt.value = it.value ?? it;
-    opt.textContent = it.label ?? it;
-    el.appendChild(opt);
-  }
-}
-
-function fillMonths(el){
-  el.innerHTML = "";
-  MESES.forEach((m, idx)=>{
-    const opt = document.createElement("option");
-    opt.value = String(idx);
-    opt.textContent = m;
-    el.appendChild(opt);
-  });
-}
-
-function fillDays(el){
-  el.innerHTML = "";
-  for(let i=1;i<=31;i++){
-    const opt = document.createElement("option");
-    opt.value = String(i);
-    opt.textContent = String(i);
-    el.appendChild(opt);
-  }
-}
-
-/* =========================
-   SIDEBAR TABS
+   TABS
 ========================= */
 function initTabs(){
   qsa(".sidebtn").forEach(btn=>{
@@ -112,43 +68,32 @@ function initTabs(){
       btn.classList.add("active");
 
       qsa(".panel").forEach(p=>p.classList.add("hidden"));
-      qs(`#tab-${btn.dataset.tab}`).classList.remove("hidden");
+      const panel = qs(`#tab-${btn.dataset.tab}`);
+      if(panel) panel.classList.remove("hidden");
     });
   });
 }
 
 /* =========================
-   RECIBO STATE
+   RECIBO (UI)
 ========================= */
-function nextRecibo(){
-  const current = Number(localStorage.getItem(STORAGE.seq) || "0");
-  const next = current + 1;
-  localStorage.setItem(STORAGE.seq, String(next));
-  qs("#recNumero").value = pad(next, 6);
-  refreshPreview();
+function getSeq(){
+  return Number(localStorage.getItem(STORAGE.seq) || "0");
+}
+function setSeq(n){
+  localStorage.setItem(STORAGE.seq, String(n));
 }
 
-function calcTotal(){
-  const ckCondo = qs("#ckCondo").checked;
-  const ckAgua = qs("#ckAgua").checked;
-
-  const vCondo = ckCondo ? brlToNumber(qs("#recValorCondo").value) : 0;
-  const vAgua  = ckAgua  ? brlToNumber(qs("#recValorAgua").value)  : 0;
-
-  const total = vCondo + vAgua;
-  qs("#recTotal").value = numberToBRL(total);
-
-  // bloqueia campo se desmarcar
-  qs("#recValorCondo").disabled = !ckCondo;
-  qs("#recValorAgua").disabled = !ckAgua;
-
-  return { vCondo, vAgua, total };
+function nextRecibo(){
+  const next = getSeq() + 1;
+  setSeq(next);
+  qs("#recNumero").value = pad(next, 6);
+  refreshAll();
 }
 
 function referenteTexto(){
   const ckCondo = qs("#ckCondo").checked;
   const ckAgua  = qs("#ckAgua").checked;
-
   if(ckCondo && ckAgua) return "Condomínio e Água";
   if(ckCondo) return "Condomínio";
   if(ckAgua) return "Água";
@@ -168,26 +113,27 @@ function emissaoLabel(){
   return `${FIXOS.cidade}, dia ${dia} de ${MESES[mesIdx]} de ${ano}`;
 }
 
-function refreshAptoLabel(){
-  const ap = qs("#recApto").value;
-  qs("#txtApto").textContent = `Apto ${ap}`;
+function calcTotal(){
+  const ckCondo = qs("#ckCondo").checked;
+  const ckAgua  = qs("#ckAgua").checked;
+
+  const vCondo = ckCondo ? brlToNumber(qs("#recValorCondo").value) : 0;
+  const vAgua  = ckAgua  ? brlToNumber(qs("#recValorAgua").value)  : 0;
+
+  qs("#recValorCondo").disabled = !ckCondo;
+  qs("#recValorAgua").disabled = !ckAgua;
+
+  const total = vCondo + vAgua;
+  qs("#recTotal").value = numberToBRL(total);
+  return { vCondo, vAgua, total };
 }
 
-function buildPreviewText(){
+function previewText(){
   const num = qs("#recNumero").value.trim() || "______";
   const nome = qs("#recNome").value.trim() || "__________________________";
   const apto = qs("#recApto").value;
+
   const { vCondo, vAgua, total } = calcTotal();
-
-  const ref = refLabel();
-  const refTxt = referenteTexto();
-  const emissao = emissaoLabel();
-
-  const linhasValores = [
-    `• Condomínio: ${numberToBRL(vCondo)}`,
-    `• Água: ${numberToBRL(vAgua)}`,
-    `• Total: ${numberToBRL(total)}`
-  ].join("\n");
 
   return (
 `RECIBO Nº ${num}
@@ -195,28 +141,28 @@ function buildPreviewText(){
 Recebido de: ${nome}
 Endereço: ${FIXOS.endereco} — Apto ${apto}
 
-Referente a: ${refTxt}
-Mês/Referência: ${ref}
+Referente a: ${referenteTexto()}
+Mês/Referência: ${refLabel()}
 
 Valores:
-${linhasValores}
+• Condomínio: ${numberToBRL(vCondo)}
+• Água: ${numberToBRL(vAgua)}
+• Total: ${numberToBRL(total)}
 
-${emissao}
+${emissaoLabel()}
 
 Emitente: ${FIXOS.emitente}
-
-Assinatura: ____________________________
 `
   );
 }
 
-function refreshPreview(){
-  refreshAptoLabel();
-  qs("#recPreview").textContent = buildPreviewText();
+function refreshAll(){
+  qs("#txtApto").textContent = `Apto ${qs("#recApto").value}`;
+  qs("#recPreview").textContent = previewText();
 }
 
 /* =========================
-   PDF
+   PDF - RECIBO
 ========================= */
 function pdfHeader(doc, title){
   doc.setFont("helvetica","bold");
@@ -231,36 +177,19 @@ function pdfHeader(doc, title){
   doc.line(14, 25, 196, 25);
 }
 
-function pdfAddSignature(doc, x, y, w, h){
-  const sig = getSig();
-  if(!sig) return;
-
-  const isPng = sig.startsWith("data:image/png");
-  const isJpg = sig.startsWith("data:image/jpeg") || sig.startsWith("data:image/jpg");
-  const fmt = isPng ? "PNG" : (isJpg ? "JPEG" : "PNG");
-
-  try{
-    doc.addImage(sig, fmt, x, y, w, h);
-  }catch{
-    // ignora se falhar
-  }
-}
-
-function gerarPDF(){
+function gerarPDFRecibo(){
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF({ unit:"mm", format:"a4" });
 
-  // se não tiver número, gera
-  if(!qs("#recNumero").value.trim()) nextRecibo();
+  if(!qs("#recNumero").value.trim()){
+    nextRecibo();
+  }
 
   const num = qs("#recNumero").value.trim();
   const nome = qs("#recNome").value.trim();
   const apto = qs("#recApto").value;
 
   const { vCondo, vAgua, total } = calcTotal();
-  const refTxt = referenteTexto();
-  const ref = refLabel();
-  const emissao = emissaoLabel();
 
   pdfHeader(doc, `RECIBO Nº ${num}`);
 
@@ -272,189 +201,354 @@ function gerarPDF(){
 
   doc.text(`Recebido de: ${nome || "________________________________________"}`, 14, y); y += lh;
   doc.text(`Endereço: ${FIXOS.endereco} — Apto ${apto}`, 14, y); y += lh;
-  doc.text(`Referente a: ${refTxt}`, 14, y); y += lh;
-  doc.text(`Mês/Referência: ${ref}`, 14, y); y += (lh+2);
+  doc.text(`Referente a: ${referenteTexto()}`, 14, y); y += lh;
+  doc.text(`Mês/Referência: ${refLabel()}`, 14, y); y += (lh+2);
 
   doc.setFont("helvetica","bold");
   doc.text("Valores recebidos:", 14, y); y += lh;
+
   doc.setFont("helvetica","normal");
   doc.text(`Condomínio: ${numberToBRL(vCondo)}`, 14, y); y += lh;
   doc.text(`Água: ${numberToBRL(vAgua)}`, 14, y); y += lh;
+
   doc.setFont("helvetica","bold");
   doc.text(`TOTAL: ${numberToBRL(total)}`, 14, y); y += (lh+4);
 
   doc.setFont("helvetica","normal");
-  doc.text(emissao, 14, y); y += (lh+6);
+  doc.text(emissaoLabel(), 14, y); y += (lh+6);
 
-  doc.text(`Emitente: ${FIXOS.emitente}`, 14, y); y += (lh+6);
-
-  // assinatura
-  doc.line(14, y, 120, y);
-  doc.setFontSize(10);
-  doc.text("Assinatura", 14, y + 5);
-
-  // imagem assinatura (opcional)
-  pdfAddSignature(doc, 14, y - 18, 70, 16);
+  doc.text(`Emitente: ${FIXOS.emitente}`, 14, y);
 
   doc.save(`Recibo_${num}_Apto_${apto}.pdf`);
 }
 
 /* =========================
-   HISTÓRICO
+   RECIBOS (HISTÓRICO)
 ========================= */
-function getHist(){ return loadJSON(STORAGE.hist, []); }
-function setHist(arr){ saveJSON(STORAGE.hist, arr); }
+function getRecibos(){ return loadJSON(STORAGE.recibos, []); }
+function setRecibos(arr){ saveJSON(STORAGE.recibos, arr); }
 
-function salvarHistorico(){
-  // se não tiver número, gera
-  if(!qs("#recNumero").value.trim()) nextRecibo();
+function salvarReciboHistorico(){
+  if(!qs("#recNumero").value.trim()){
+    nextRecibo();
+  }
 
   const num = qs("#recNumero").value.trim();
   const nome = qs("#recNome").value.trim();
   const apto = qs("#recApto").value;
 
-  const mesIdx = Number(qs("#recMesRef").value);
-  const anoRef = Number(qs("#recAnoRef").value);
+  const refMes = Number(qs("#recMesRef").value);
+  const refAno = Number(qs("#recAnoRef").value);
 
-  const dia = Number(qs("#recDia").value);
-  const mesEm = Number(qs("#recMesEmissao").value);
-  const anoEm = Number(qs("#recAnoEmissao").value);
+  const emDia = Number(qs("#recDia").value);
+  const emMes = Number(qs("#recMesEmissao").value);
+  const emAno = Number(qs("#recAnoEmissao").value);
 
   const { vCondo, vAgua, total } = calcTotal();
 
   const item = {
-    id: crypto.randomUUID(),
-    num,
-    apto,
-    nome,
-    refMes: mesIdx,
-    refAno: anoRef,
-    emDia: dia,
-    emMes: mesEm,
-    emAno: anoEm,
-    vCondo,
-    vAgua,
-    total,
+    id: uid(),
+    num, nome, apto,
+    refMes, refAno,
+    emDia, emMes, emAno,
+    vCondo, vAgua, total,
     createdAt: new Date().toISOString()
   };
 
-  const arr = getHist();
+  const arr = getRecibos();
   arr.push(item);
-  setHist(arr);
-  renderHist();
-  alert("Salvo no histórico!");
+  setRecibos(arr);
+
+  renderHistorico();
+  alert("Recibo salvo no histórico!");
 }
 
-function delHist(id){
-  setHist(getHist().filter(x=>x.id !== id));
-  renderHist();
-}
-
-function renderHist(){
-  const tbody = qs("#tbodyHist");
-  const arr = getHist().slice().sort((a,b)=> a.num.localeCompare(b.num));
-
-  tbody.innerHTML = "";
-  for(const h of arr){
-    const tr = document.createElement("tr");
-    tr.innerHTML = `
-      <td>${h.num}</td>
-      <td>${MESES[h.refMes]}/${h.refAno}</td>
-      <td>${h.apto}</td>
-      <td>${h.nome || ""}</td>
-      <td>${numberToBRL(h.vCondo)}</td>
-      <td>${numberToBRL(h.vAgua)}</td>
-      <td><b>${numberToBRL(h.total)}</b></td>
-      <td>${h.emDia}/${String(h.emMes+1).padStart(2,"0")}/${h.emAno}</td>
-      <td class="actions">
-        <button class="linkbtn" data-del="${h.id}">Excluir</button>
-      </td>
-    `;
-    tbody.appendChild(tr);
-  }
-
-  tbody.querySelectorAll("[data-del]").forEach(btn=>{
-    btn.addEventListener("click", ()=> delHist(btn.dataset.del));
-  });
+function delRecibo(id){
+  setRecibos(getRecibos().filter(r => r.id !== id));
+  renderHistorico();
 }
 
 /* =========================
-   ASSINATURA
+   DESPESAS
 ========================= */
-function fileToBase64(file){
-  return new Promise((resolve, reject)=>{
-    const r = new FileReader();
-    r.onload = ()=> resolve(r.result);
-    r.onerror = reject;
-    r.readAsDataURL(file);
+function getDespesas(){ return loadJSON(STORAGE.despesas, []); }
+function setDespesas(arr){ saveJSON(STORAGE.despesas, arr); }
+
+function addDespesa(){
+  const mes = Number(qs("#despMes").value);
+  const ano = Number(qs("#despAno").value);
+  const cat = qs("#despCat").value;
+  const valor = brlToNumber(qs("#despValor").value);
+  const desc = qs("#despDesc").value.trim();
+
+  if(!ano || isNaN(ano)){
+    alert("Preencha o ano da despesa.");
+    return;
+  }
+  if(!valor){
+    alert("Preencha um valor válido.");
+    return;
+  }
+
+  const item = {
+    id: uid(),
+    mes, ano,
+    cat,
+    desc,
+    valor,
+    createdAt: new Date().toISOString()
+  };
+
+  const arr = getDespesas();
+  arr.push(item);
+  setDespesas(arr);
+
+  qs("#despValor").value = "";
+  qs("#despDesc").value = "";
+
+  renderDespesas();
+}
+
+function delDespesa(id){
+  setDespesas(getDespesas().filter(d => d.id !== id));
+  renderDespesas();
+}
+
+/* =========================
+   TOTAIS / PRESTAÇÃO MENSAL
+========================= */
+function ymKey(ano, mesIdx){
+  return `${ano}-${String(mesIdx+1).padStart(2,"0")}`;
+}
+
+function sumCondominio(recibos){
+  return recibos.reduce((acc,r)=> acc + (r.vCondo || 0), 0);
+}
+function sumAgua(recibos){
+  return recibos.reduce((acc,r)=> acc + (r.vAgua || 0), 0);
+}
+function sumTotal(recibos){
+  return recibos.reduce((acc,r)=> acc + (r.total || 0), 0);
+}
+function sumDespesas(despesas){
+  return despesas.reduce((acc,d)=> acc + (d.valor || 0), 0);
+}
+
+function renderHistorico(){
+  const anoFiltro = Number(qs("#histAno").value) || null;
+
+  const recibosAll = getRecibos();
+  const recibos = anoFiltro ? recibosAll.filter(r=> r.refAno === anoFiltro) : recibosAll;
+
+  const despesasAll = getDespesas();
+  const despesas = anoFiltro ? despesasAll.filter(d=> d.ano === anoFiltro) : despesasAll;
+
+  const totalCondo = sumCondominio(recibos);
+  const totalAgua = sumAgua(recibos);
+  const totalGeral = sumTotal(recibos);
+
+  const totalDesp = sumDespesas(despesas);
+
+  const caixaCondo = totalCondo - totalDesp;
+
+  qs("#histTotais").innerHTML = `
+    <div><b>Total arrecadado (somente Condomínio):</b> ${numberToBRL(totalCondo)}</div>
+    <div><b>Total arrecadado (Água):</b> ${numberToBRL(totalAgua)}</div>
+    <div><b>Total geral (Condomínio + Água):</b> ${numberToBRL(totalGeral)}</div>
+    <div style="margin-top:6px;"><b>Total de despesas (Condomínio):</b> ${numberToBRL(totalDesp)}</div>
+    <div><b>Caixa do Condomínio (Condomínio - Despesas):</b> ${numberToBRL(caixaCondo)}</div>
+  `;
+
+  const tbody = qs("#tbodyHist");
+  tbody.innerHTML = "";
+
+  recibos
+    .slice()
+    .sort((a,b)=> a.num.localeCompare(b.num))
+    .forEach(r=>{
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+        <td>${r.num}</td>
+        <td>${MESES[r.refMes]}/${r.refAno}</td>
+        <td>${r.apto}</td>
+        <td>${r.nome || ""}</td>
+        <td>${numberToBRL(r.vCondo || 0)}</td>
+        <td>${numberToBRL(r.vAgua || 0)}</td>
+        <td><b>${numberToBRL(r.total || 0)}</b></td>
+        <td>${String(r.emDia).padStart(2,"0")}/${String(r.emMes+1).padStart(2,"0")}/${r.emAno}</td>
+        <td class="actions">
+          <button class="linkbtn" data-del="${r.id}">Excluir</button>
+        </td>
+      `;
+      tbody.appendChild(tr);
+    });
+
+  tbody.querySelectorAll("[data-del]").forEach(btn=>{
+    btn.addEventListener("click", ()=> delRecibo(btn.dataset.del));
   });
 }
 
-function initAssinatura(){
-  const img = qs("#sigPreview");
-  img.src = getSig() || "";
+function renderDespesas(){
+  const despesas = getDespesas();
 
-  qs("#sigFile").addEventListener("change", async (e)=>{
-    const file = e.target.files?.[0];
-    if(!file) return;
+  const tbody = qs("#tbodyDesp");
+  tbody.innerHTML = "";
 
-    const base64 = await fileToBase64(file);
-    localStorage.setItem(STORAGE.sig, base64);
-    img.src = base64;
-    alert("Assinatura salva! Ela vai aparecer no PDF.");
-    e.target.value = "";
+  despesas
+    .slice()
+    .sort((a,b)=> (a.ano===b.ano ? a.mes-b.mes : a.ano-b.ano))
+    .forEach(d=>{
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+        <td>${MESES[d.mes]}/${d.ano}</td>
+        <td>${d.cat}</td>
+        <td>${d.desc || ""}</td>
+        <td>${numberToBRL(d.valor || 0)}</td>
+        <td class="actions">
+          <button class="linkbtn" data-ddel="${d.id}">Excluir</button>
+        </td>
+      `;
+      tbody.appendChild(tr);
+    });
+
+  tbody.querySelectorAll("[data-ddel]").forEach(btn=>{
+    btn.addEventListener("click", ()=> delDespesa(btn.dataset.ddel));
   });
 
-  qs("#btnRemoverSig").addEventListener("click", ()=>{
-    localStorage.removeItem(STORAGE.sig);
-    img.src = "";
-    alert("Assinatura removida.");
-  });
+  // totais (sem filtro aqui, o filtro está no histórico)
+  const totalDesp = sumDespesas(despesas);
+  qs("#despTotais").innerHTML = `<div><b>Total de despesas cadastradas:</b> ${numberToBRL(totalDesp)}</div>`;
+}
+
+/* =========================
+   PDF PRESTAÇÃO MENSAL
+   (Condomínio arrecadado, despesas e caixa)
+========================= */
+function gerarPDFMensal(){
+  const ano = Number(qs("#histAno").value);
+  if(!ano || isNaN(ano)){
+    alert("Para gerar PDF mensal/ano, preencha o filtro de ANO no Histórico e clique em Aplicar. Depois gere o PDF.");
+    return;
+  }
+
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ unit:"mm", format:"a4" });
+
+  const recibosAno = getRecibos().filter(r=> r.refAno === ano);
+  const despesasAno = getDespesas().filter(d=> d.ano === ano);
+
+  const totalCondo = sumCondominio(recibosAno);
+  const totalAgua = sumAgua(recibosAno);
+  const totalDesp = sumDespesas(despesasAno);
+  const caixaCondo = totalCondo - totalDesp;
+
+  // Cabeçalho
+  doc.setFont("helvetica","bold");
+  doc.setFontSize(14);
+  doc.text(`PRESTAÇÃO DE CONTAS — ${ano}`, 14, 16);
+
+  doc.setFont("helvetica","normal");
+  doc.setFontSize(10);
+  doc.text(`${FIXOS.endereco} — ${FIXOS.cidade}/RJ`, 14, 22);
+  doc.line(14, 25, 196, 25);
+
+  let y = 36;
+  doc.setFontSize(12);
+  doc.text(`Total arrecadado (Condomínio): ${numberToBRL(totalCondo)}`, 14, y); y += 8;
+  doc.text(`Total arrecadado (Água): ${numberToBRL(totalAgua)}`, 14, y); y += 8;
+  doc.text(`Total de despesas (Condomínio): ${numberToBRL(totalDesp)}`, 14, y); y += 8;
+
+  doc.setFont("helvetica","bold");
+  doc.text(`CAIXA do Condomínio: ${numberToBRL(caixaCondo)}`, 14, y); y += 10;
+
+  doc.setFont("helvetica","bold");
+  doc.text("Despesas do ano:", 14, y); y += 8;
+  doc.setFont("helvetica","normal");
+  doc.setFontSize(10);
+
+  if(despesasAno.length === 0){
+    doc.text("Nenhuma despesa cadastrada neste ano.", 14, y);
+  } else {
+    despesasAno
+      .slice()
+      .sort((a,b)=> (a.mes===b.mes ? a.cat.localeCompare(b.cat) : a.mes-b.mes))
+      .forEach(d=>{
+        const linha = `${MESES[d.mes]}/${d.ano} — ${d.cat} — ${numberToBRL(d.valor)}${d.desc ? " — " + d.desc : ""}`;
+        const split = doc.splitTextToSize(linha, 180);
+        doc.text(split, 14, y);
+        y += split.length * 5;
+
+        if(y > 275){
+          doc.addPage();
+          y = 20;
+        }
+      });
+  }
+
+  doc.setFontSize(10);
+  doc.setFont("helvetica","normal");
+  doc.text(`Emitente: ${FIXOS.emitente}`, 14, 285);
+
+  doc.save(`Prestacao_de_Contas_${ano}.pdf`);
 }
 
 /* =========================
    EVENTS
 ========================= */
-function initEvents(){
-  // total recalcula
-  ["#recValorCondo","#recValorAgua","#ckCondo","#ckAgua"].forEach(sel=>{
-    qs(sel).addEventListener("input", ()=>{ calcTotal(); refreshPreview(); });
-    qs(sel).addEventListener("change", ()=>{ calcTotal(); refreshPreview(); });
-  });
+function wireEvents(){
+  // Tabs
+  initTabs();
 
-  // preview geral
-  ["#recNumero","#recNome","#recApto","#recMesRef","#recAnoRef","#recDia","#recMesEmissao","#recAnoEmissao"].forEach(sel=>{
-    qs(sel).addEventListener("input", refreshPreview);
-    qs(sel).addEventListener("change", refreshPreview);
+  // Recibo changes
+  [
+    "#recNumero","#recNome","#recApto","#recMesRef","#recAnoRef",
+    "#recDia","#recMesEmissao","#recAnoEmissao",
+    "#ckCondo","#ckAgua","#recValorCondo","#recValorAgua"
+  ].forEach(sel=>{
+    const el = qs(sel);
+    if(!el) return;
+    el.addEventListener("input", refreshAll);
+    el.addEventListener("change", refreshAll);
   });
 
   qs("#btnProximo").addEventListener("click", nextRecibo);
-  qs("#btnGerarPDF").addEventListener("click", gerarPDF);
-  qs("#btnSalvarHist").addEventListener("click", salvarHistorico);
+  qs("#btnGerarPDF").addEventListener("click", gerarPDFRecibo);
+  qs("#btnSalvarHist").addEventListener("click", salvarReciboHistorico);
+
+  // Histórico
+  qs("#btnAplicarAno").addEventListener("click", ()=>{
+    renderHistorico();
+  });
 
   qs("#btnLimparHist").addEventListener("click", ()=>{
-    const ok = confirm("Tem certeza que deseja limpar TODO o histórico deste navegador?");
+    const ok = confirm("Tem certeza que deseja apagar TODO o histórico de recibos deste navegador?");
     if(!ok) return;
-    setHist([]);
-    renderHist();
-    alert("Histórico limpo.");
+    setRecibos([]);
+    renderHistorico();
+    alert("Histórico apagado.");
+  });
+
+  qs("#btnPDFMensal").addEventListener("click", gerarPDFMensal);
+
+  // Despesas
+  qs("#btnAddDesp").addEventListener("click", addDespesa);
+
+  qs("#btnLimparDesp").addEventListener("click", ()=>{
+    const ok = confirm("Tem certeza que deseja apagar TODAS as despesas deste navegador?");
+    if(!ok) return;
+    setDespesas([]);
+    renderDespesas();
+    renderHistorico();
+    alert("Despesas apagadas.");
   });
 }
 
 /* =========================
-   BOOT
+   BOOT (seguro)
 ========================= */
-(function boot(){
-  initTabs();
-
-  // selects
-  fillSelect(qs("#recApto"), APTOS);
-  fillMonths(qs("#recMesRef"));
-  fillMonths(qs("#recMesEmissao"));
-  fillDays(qs("#recDia"));
-
-  // defaults (hoje)
-  const t = todayParts();
+document.addEventListener("DOMContentLoaded", ()=>{
+  // Defaults de data e ano
+  const t = today();
   qs("#recDia").value = String(t.dia);
   qs("#recMesEmissao").value = String(t.mes);
   qs("#recAnoEmissao").value = t.ano;
@@ -462,14 +556,20 @@ function initEvents(){
   qs("#recMesRef").value = String(t.mes);
   qs("#recAnoRef").value = t.ano;
 
-  // placeholder número
-  const seq = Number(localStorage.getItem(STORAGE.seq) || "0");
-  qs("#recNumero").placeholder = `Sugestão: ${pad(seq+1, 6)}`;
+  qs("#histAno").value = t.ano;
 
-  // init
-  calcTotal();
-  initEvents();
-  initAssinatura();
-  renderHist();
-  refreshPreview();
-})();
+  qs("#despMes").value = String(t.mes);
+  qs("#despAno").value = t.ano;
+
+  // Placeholder do número
+  const seq = getSeq();
+  qs("#recNumero").placeholder = `Sugestão: ${pad(seq + 1, 6)}`;
+
+  // Render inicial
+  refreshAll();
+  renderHistorico();
+  renderDespesas();
+
+  // Eventos
+  wireEvents();
+});
