@@ -1,1 +1,98 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Condomínio Rua Glaziou 30</title>
 
+  <link rel="stylesheet" href="style.css">
+
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <!-- jsPDF -->
+  <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+</head>
+
+<body>
+
+  <h1>Condomínio - Rua Glaziou, 30</h1>
+
+  <nav>
+    <button onclick="mostrarAba('recibo')">Recibo</button>
+    <button onclick="mostrarAba('pagamentos')">Pagamentos</button>
+    <button onclick="mostrarAba('agua')">Água por Bloco</button>
+    <button onclick="mostrarAba('manutencao')">Manutenção</button>
+  </nav>
+
+  <!-- ================= RECIBO ================= -->
+  <section id="recibo" class="aba">
+    <h2>Gerar Recibo</h2>
+
+    <label>Nº Recibo</label>
+    <input type="text" id="numeroRecibo">
+
+    <label>Valor (R$)</label>
+    <input type="text" id="valorRecibo">
+
+    <label>Recebido de</label>
+    <input type="text" id="recebidoDe">
+
+    <label>Apartamento</label>
+    <select id="apartamento">
+      <option>101</option>
+      <option>101 Fundos</option>
+      <option>201</option>
+      <option>201 Sala</option>
+      <option>201 Fundos</option>
+      <option>301</option>
+      <option>301 Sala</option>
+      <option>301 Fundos</option>
+    </select>
+
+    <label>Referente a</label>
+    <input type="text" id="referente">
+
+    <button onclick="gerarPDF()">Gerar PDF</button>
+  </section>
+
+  <!-- ================= PAGAMENTOS ================= -->
+  <section id="pagamentos" class="aba" style="display:none;">
+    <h2>Registro de Pagamentos</h2>
+
+    <canvas id="graficoPagamentos"></canvas>
+  </section>
+
+  <!-- ================= ÁGUA ================= -->
+  <section id="agua" class="aba" style="display:none;">
+    <h2>Divisão de Água</h2>
+
+    <label>Valor Bloco 1</label>
+    <input type="number" id="bloco1">
+
+    <label>Valor Bloco 2</label>
+    <input type="number" id="bloco2">
+
+    <button onclick="calcularAgua()">Calcular</button>
+
+    <div id="resultadoAgua"></div>
+  </section>
+
+  <!-- ================= MANUTENÇÃO ================= -->
+  <section id="manutencao" class="aba" style="display:none;">
+    <h2>Relatório de Manutenção</h2>
+
+    <label>Descrição</label>
+    <input type="text" id="descricaoManut">
+
+    <label>Valor</label>
+    <input type="number" id="valorManut">
+
+    <button onclick="adicionarManutencao()">Adicionar</button>
+
+    <canvas id="graficoManut"></canvas>
+  </section>
+
+  <script src="app.js"></script>
+</body>
+</html>
