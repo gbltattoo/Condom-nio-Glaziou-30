@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Recibos — Condomínio Rua Glaziou, 30</title>
+  <title>Condomínio Rua Glaziou, 30 — Recibos e Despesas</title>
 
   <link rel="stylesheet" href="style.css" />
 
@@ -14,27 +14,32 @@
 <body>
   <header class="topbar">
     <div>
-      <h1>Recibo — Condomínio Rua Glaziou, 30</h1>
-      <p class="muted">Preencha, gere o PDF e dê baixa com organização.</p>
+      <h1>Condomínio — Rua Glaziou, 30</h1>
+      <p class="muted">Recibos • Histórico • Despesas (tudo salvo neste navegador)</p>
     </div>
   </header>
 
   <main class="layout">
-    <!-- ====== LATERAL (pequena) ====== -->
     <aside class="sidebar">
       <button class="sidebtn active" data-tab="recibo">Recibo</button>
       <button class="sidebtn" data-tab="historico">Histórico</button>
-      <button class="sidebtn" data-tab="assinatura">Assinatura</button>
+      <button class="sidebtn" data-tab="despesas">Despesas</button>
+
+      <div class="sidebox">
+        <div class="muted small">Fixos:</div>
+        <div><b>Endereço:</b> Rua Glaziou, 30</div>
+        <div><b>Cidade:</b> Rio de Janeiro</div>
+        <div><b>Emitente:</b> Gabriel Brito Cirilo</div>
+      </div>
     </aside>
 
-    <!-- ====== CONTEÚDO ====== -->
     <section class="content">
 
-      <!-- =================== RECIBO =================== -->
-      <div class="panel" id="tab-recibo">
+      <!-- ================== RECIBO ================== -->
+      <section class="panel" id="tab-recibo">
         <div class="grid">
           <div class="card">
-            <h2>Dados do recibo</h2>
+            <h2>Gerar Recibo (PDF)</h2>
 
             <div class="row">
               <div class="field">
@@ -43,28 +48,50 @@
                   <input id="recNumero" type="text" placeholder="Clique em Próximo" />
                   <button class="btn small" id="btnProximo">Próximo</button>
                 </div>
-                <small class="muted">Numeração automática (salva no navegador).</small>
+                <small class="muted">Numeração automática. Você pode editar se quiser.</small>
               </div>
 
               <div class="field">
                 <label>Apartamento</label>
-                <select id="recApto"></select>
+                <select id="recApto">
+                  <option>101</option>
+                  <option>101 Fundos</option>
+                  <option>201</option>
+                  <option>201 Sala</option>
+                  <option>201 Fundos</option>
+                  <option>301</option>
+                  <option>301 Sala</option>
+                  <option>301 Fundos</option>
+                </select>
               </div>
             </div>
 
             <div class="row">
               <div class="field">
-                <label>Recebido de (nome)</label>
+                <label>Recebido de (nome do inquilino/proprietário)</label>
                 <input id="recNome" type="text" placeholder="Ex: Maria Silva" />
-                <small class="muted">Você só digita o nome. O apto é selecionado acima.</small>
               </div>
             </div>
 
             <div class="row">
               <div class="field">
                 <label>Referente ao mês</label>
-                <select id="recMesRef"></select>
+                <select id="recMesRef">
+                  <option value="0">Janeiro</option>
+                  <option value="1">Fevereiro</option>
+                  <option value="2">Março</option>
+                  <option value="3">Abril</option>
+                  <option value="4">Maio</option>
+                  <option value="5">Junho</option>
+                  <option value="6">Julho</option>
+                  <option value="7">Agosto</option>
+                  <option value="8">Setembro</option>
+                  <option value="9">Outubro</option>
+                  <option value="10">Novembro</option>
+                  <option value="11">Dezembro</option>
+                </select>
               </div>
+
               <div class="field">
                 <label>Ano de referência</label>
                 <input id="recAnoRef" type="number" min="2000" max="2100" />
@@ -73,14 +100,15 @@
 
             <h3>O que foi pago</h3>
             <div class="row">
-              <div class="check">
+              <label class="check">
                 <input type="checkbox" id="ckCondo" checked />
-                <label for="ckCondo">Condomínio</label>
-              </div>
-              <div class="check">
+                <span>Condomínio</span>
+              </label>
+
+              <label class="check">
                 <input type="checkbox" id="ckAgua" />
-                <label for="ckAgua">Água</label>
-              </div>
+                <span>Água</span>
+              </label>
             </div>
 
             <div class="row">
@@ -92,9 +120,6 @@
                 <label>Valor Água (R$)</label>
                 <input id="recValorAgua" type="text" inputmode="decimal" placeholder="Ex: 80,00" />
               </div>
-            </div>
-
-            <div class="row">
               <div class="field">
                 <label>Total recebido (automático)</label>
                 <input id="recTotal" type="text" readonly />
@@ -105,12 +130,35 @@
             <div class="row">
               <div class="field">
                 <label>Dia</label>
-                <select id="recDia"></select>
+                <select id="recDia">
+                  <option>1</option><option>2</option><option>3</option><option>4</option><option>5</option>
+                  <option>6</option><option>7</option><option>8</option><option>9</option><option>10</option>
+                  <option>11</option><option>12</option><option>13</option><option>14</option><option>15</option>
+                  <option>16</option><option>17</option><option>18</option><option>19</option><option>20</option>
+                  <option>21</option><option>22</option><option>23</option><option>24</option><option>25</option>
+                  <option>26</option><option>27</option><option>28</option><option>29</option><option>30</option>
+                  <option>31</option>
+                </select>
               </div>
+
               <div class="field">
                 <label>Mês</label>
-                <select id="recMesEmissao"></select>
+                <select id="recMesEmissao">
+                  <option value="0">Janeiro</option>
+                  <option value="1">Fevereiro</option>
+                  <option value="2">Março</option>
+                  <option value="3">Abril</option>
+                  <option value="4">Maio</option>
+                  <option value="5">Junho</option>
+                  <option value="6">Julho</option>
+                  <option value="7">Agosto</option>
+                  <option value="8">Setembro</option>
+                  <option value="9">Outubro</option>
+                  <option value="10">Novembro</option>
+                  <option value="11">Dezembro</option>
+                </select>
               </div>
+
               <div class="field">
                 <label>Ano</label>
                 <input id="recAnoEmissao" type="number" min="2000" max="2100" />
@@ -119,31 +167,42 @@
 
             <div class="row">
               <button class="btn" id="btnGerarPDF">Gerar PDF</button>
-              <button class="btn ghost" id="btnSalvarHist">Salvar no histórico</button>
+              <button class="btn ghost" id="btnSalvarHist">Salvar no Histórico</button>
             </div>
 
-            <div class="fixedinfo">
-              <div><b>Endereço:</b> Rua Glaziou, 30 — <span id="txtApto"></span></div>
-              <div><b>Cidade:</b> Rio de Janeiro</div>
-              <div><b>Emitente:</b> Gabriel Brito Cirilo</div>
+            <div class="note">
+              <b>Endereço fixo no recibo:</b> Rua Glaziou, 30 — <span class="muted" id="txtApto">Apto ...</span>
+              <br/>
+              <b>Cidade fixa:</b> Rio de Janeiro • <b>Emitente fixo:</b> Gabriel Brito Cirilo
             </div>
           </div>
 
           <div class="card">
-            <h2>Prévia do recibo</h2>
+            <h2>Prévia</h2>
             <div class="preview" id="recPreview"></div>
-            <small class="muted">
-              A assinatura sai no PDF se você enviar na aba “Assinatura”.
-            </small>
+            <small class="muted">Se a prévia estiver em branco, é porque o JS não carregou (mas com esse pacote novo, deve carregar).</small>
           </div>
         </div>
-      </div>
+      </section>
 
-      <!-- =================== HISTÓRICO =================== -->
-      <div class="panel hidden" id="tab-historico">
+      <!-- ================== HISTÓRICO ================== -->
+      <section class="panel hidden" id="tab-historico">
         <div class="card">
-          <h2>Histórico de recibos</h2>
-          <p class="muted">Aqui fica salvo o que você registrar no navegador.</p>
+          <div class="row between">
+            <div>
+              <h2>Histórico de Recibos</h2>
+              <p class="muted">Mostra todos os recibos salvos + totais. (Somatório do condomínio separado)</p>
+            </div>
+            <div class="inline">
+              <div class="field smallfield">
+                <label>Filtrar ano</label>
+                <input id="histAno" type="number" min="2000" max="2100" />
+              </div>
+              <button class="btn ghost" id="btnAplicarAno">Aplicar</button>
+            </div>
+          </div>
+
+          <div class="totals" id="histTotais"></div>
 
           <div class="tablewrap">
             <table>
@@ -165,37 +224,85 @@
           </div>
 
           <div class="row">
-            <button class="btn danger" id="btnLimparHist">Limpar histórico</button>
+            <button class="btn" id="btnPDFMensal">Gerar PDF Mensal (Prestação de contas)</button>
+            <button class="btn danger" id="btnLimparHist">Limpar Histórico</button>
           </div>
         </div>
-      </div>
+      </section>
 
-      <!-- =================== ASSINATURA =================== -->
-      <div class="panel hidden" id="tab-assinatura">
+      <!-- ================== DESPESAS ================== -->
+      <section class="panel hidden" id="tab-despesas">
         <div class="grid">
           <div class="card">
-            <h2>Assinatura no PDF</h2>
-            <p class="muted">Envie uma imagem (PNG/JPG) com sua assinatura para aparecer no PDF.</p>
-
-            <label class="btn filebtn">
-              Enviar assinatura
-              <input type="file" id="sigFile" accept="image/*" />
-            </label>
+            <h2>Despesas do Condomínio</h2>
+            <p class="muted">Registre despesas (zelador, limpeza, manutenção etc.). Isso entra na prestação de contas mensal.</p>
 
             <div class="row">
-              <button class="btn ghost" id="btnRemoverSig">Remover assinatura</button>
+              <div class="field">
+                <label>Mês</label>
+                <select id="despMes">
+                  <option value="0">Janeiro</option><option value="1">Fevereiro</option><option value="2">Março</option>
+                  <option value="3">Abril</option><option value="4">Maio</option><option value="5">Junho</option>
+                  <option value="6">Julho</option><option value="7">Agosto</option><option value="8">Setembro</option>
+                  <option value="9">Outubro</option><option value="10">Novembro</option><option value="11">Dezembro</option>
+                </select>
+              </div>
+              <div class="field">
+                <label>Ano</label>
+                <input id="despAno" type="number" min="2000" max="2100" />
+              </div>
+            </div>
+
+            <div class="row">
+              <div class="field">
+                <label>Categoria</label>
+                <select id="despCat">
+                  <option>Zelador</option>
+                  <option>Material de limpeza</option>
+                  <option>Serviços extras / manutenção</option>
+                  <option>Outros</option>
+                </select>
+              </div>
+
+              <div class="field">
+                <label>Valor (R$)</label>
+                <input id="despValor" type="text" inputmode="decimal" placeholder="Ex: 300,00" />
+              </div>
+            </div>
+
+            <div class="row">
+              <div class="field">
+                <label>Descrição (opcional)</label>
+                <input id="despDesc" type="text" placeholder="Ex: Zelador - mês / compra de vassoura e detergente..." />
+              </div>
+            </div>
+
+            <div class="row">
+              <button class="btn" id="btnAddDesp">Adicionar despesa</button>
+              <button class="btn danger" id="btnLimparDesp">Limpar despesas</button>
             </div>
           </div>
 
           <div class="card">
-            <h2>Prévia</h2>
-            <div class="sigbox">
-              <img id="sigPreview" alt="Assinatura" />
+            <h2>Lista de despesas</h2>
+            <div class="tablewrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Ref.</th>
+                    <th>Categoria</th>
+                    <th>Descrição</th>
+                    <th>Valor</th>
+                    <th>Ações</th>
+                  </tr>
+                </thead>
+                <tbody id="tbodyDesp"></tbody>
+              </table>
             </div>
-            <small class="muted">Emitente fixo: Gabriel Brito Cirilo</small>
+            <div class="totals" id="despTotais"></div>
           </div>
         </div>
-      </div>
+      </section>
 
     </section>
   </main>
