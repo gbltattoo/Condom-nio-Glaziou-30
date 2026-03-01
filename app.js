@@ -13,9 +13,9 @@ const FIXOS = {
 };
 
 const STORAGE = {
-  seq: "glaziou30_recibo_seq_v6",
-  recibos: "glaziou30_recibos_v6",
-  despesas: "glaziou30_despesas_v6",
+  seq: "glaziou30_recibo_seq_v7",
+  recibos: "glaziou30_recibos_v7",
+  despesas: "glaziou30_despesas_v7",
   logoDataUrl: "glaziou30_logo_dataurl_v1"
 };
 
@@ -42,9 +42,7 @@ function loadJSON(key, fallback){
     return fallback;
   }
 }
-function uid(){
-  return `id_${Date.now()}_${Math.random().toString(16).slice(2)}`;
-}
+function uid(){ return `id_${Date.now()}_${Math.random().toString(16).slice(2)}`; }
 function today(){
   const d = new Date();
   return { dia:d.getDate(), mes:d.getMonth(), ano:d.getFullYear() };
@@ -56,7 +54,6 @@ function initTabs(){
     btn.addEventListener("click", ()=>{
       qsa(".sidebtn").forEach(b=>b.classList.remove("active"));
       btn.classList.add("active");
-
       qsa(".panel").forEach(p=>p.classList.add("hidden"));
       const panel = qs(`#tab-${btn.dataset.tab}`);
       if(panel) panel.classList.remove("hidden");
@@ -104,7 +101,14 @@ function enderecoCompleto(apto){
   return `${FIXOS.rua} - Apto ${apto} / ${FIXOS.bairroUf}`;
 }
 
-/* ===== Recibo ===== */
+/* ===== Recibo UI ===== */
+function referenteTextoFromValues(vCondo, vAgua){
+  if(vCondo > 0 && vAgua > 0) return "Condomínio e Água";
+  if(vCondo > 0) return "Condomínio";
+  if(vAgua > 0) return "Água";
+  return "—";
+}
+
 function referenteTexto(){
   const ckCondo = qs("#ckCondo").checked;
   const ckAgua  = qs("#ckAgua").checked;
@@ -113,15 +117,12 @@ function referenteTexto(){
   if(ckAgua) return "Água";
   return "—";
 }
-function refLabel(){
-  const mesIdx = Number(qs("#recMesRef").value);
-  const anoRef = Number(qs("#recAnoRef").value);
+
+function refLabel(mesIdx, anoRef){
   return `${MESES[mesIdx]}/${anoRef}`;
 }
-function emissaoLabel(){
-  const dia = Number(qs("#recDia").value);
-  const mesIdx = Number(qs("#recMesEmissao").value);
-  const ano = Number(qs("#recAnoEmissao").value);
+
+function emissaoLabel(dia, mesIdx, ano){
   return `${FIXOS.cidade}, dia ${dia} de ${MESES[mesIdx]} de ${ano}`;
 }
 
@@ -144,8 +145,15 @@ function previewText(){
   const num = qs("#recNumero").value.trim() || "______";
   const nome = qs("#recNome").value.trim() || "__________________________";
   const apto = qs("#recApto").value;
-  const { vCondo, vAgua, total } = calcTotal();
 
+  const refMes = Number(qs("#recMesRef").value);
+  const refAno = Number(qs("#recAnoRef").value);
+
+  const emDia = Number(qs("#recDia").value);
+  const emMes = Number(qs("#recMesEmissao").value);
+  const emAno = Number(qs("#recAnoEmissao").value);
+
+  const { vCondo, vAgua, total } = calcTotal();
   const end = enderecoCompleto(apto);
 
   return (
@@ -156,14 +164,14 @@ Endereço: ${end}
 CEP: ${FIXOS.cep}
 
 Referente a: ${referenteTexto()}
-Mês/Referência: ${refLabel()}
+Mês/Referência: ${refLabel(refMes, refAno)}
 
 Valores:
 • Condomínio: ${numberToBRL(vCondo)}
 • Água: ${numberToBRL(vAgua)}
 • Total: ${numberToBRL(total)}
 
-${emissaoLabel()}
+${emissaoLabel(emDia, emMes, emAno)}
 
 Emitente: ${FIXOS.emitente}
 `
@@ -226,11 +234,67 @@ function addLogoToPdf(doc, dataUrl){
   }
 }
 
-/* ===== Histórico (Recibos) ===== */
+function pdfHeader(doc, title, headerY){
+  doc.setFont("helvetica","bold");
+  doc.setFontSize(14);
+  doc.text(title, 14, headerY);
+
+  doc.setFont("helvetica","normal");
+  doc.setFontSize(10);
+  doc.text(`${FIXOS.rua} / ${FIXOS.bairroUf} — CEP ${FIXOS.cep} — ${FIXOS.cidade}/RJ`, 14, headerY + 6);
+
+  doc.setDrawColor(60);
+  doc.line(14, headerY + 9, 196, headerY + 9);
+
+  return headerY + 22;
+}
+
+/* ===== Histórico: filtros ===== */
+function getFiltro(){
+  const ano = Number(qs("#histAno").value) || null;
+  const mes = Number(qs("#histMes").value); // -1 = todos
+  const mesValido = (mes >= 0 && mes <= 11) ? mes : null;
+  return { ano, mes: mesValido };
+}
+
+function sameRef(r, ano, mes){
+  if(ano && r.refAno !== ano) return false;
+  if(mes !== null && r.refMes !== mes) return false;
+  return true;
+}
+
+/* ===== Somatórios ===== */
+function sum(arr, key){ return arr.reduce((acc,o)=> acc + (Number(o[key]) || 0), 0); }
+function sumCondo(recibos){ return sum(recibos, "vCondo"); }
+function sumAgua(recibos){ return sum(recibos, "vAgua"); }
+function sumTotal(recibos){ return sum(recibos, "total"); }
+function sumDesp(despesas){ return sum(despesas, "valor"); }
+
+/* ===== Caixa acumulado até (ano, mes) =====
+   - considera SOMENTE caixa do condomínio: (entradas condomínio - despesas)
+*/
+function ymKey(ano, mes){ return ano * 12 + mes; }
+
+function saldoAcumuladoAte(ano, mes){
+  const recibos = getRecibos().filter(r => r.refAno && r.refMes !== undefined);
+  const despesas = getDespesas().filter(d => d.ano && d.mes !== undefined);
+
+  const limite = ymKey(ano, mes);
+
+  const condoAte = recibos
+    .filter(r => ymKey(r.refAno, r.refMes) <= limite)
+    .reduce((acc,r)=> acc + (r.vCondo || 0), 0);
+
+  const despAte = despesas
+    .filter(d => ymKey(d.ano, d.mes) <= limite)
+    .reduce((acc,d)=> acc + (d.valor || 0), 0);
+
+  return condoAte - despAte;
+}
+
+/* ===== Recibo: salvar ===== */
 function salvarReciboHistorico(silent=false){
-  if(!qs("#recNumero").value.trim()){
-    setNextNumberOnLoad();
-  }
+  if(!qs("#recNumero").value.trim()) setNextNumberOnLoad();
 
   const num = qs("#recNumero").value.trim();
   const nome = qs("#recNome").value.trim();
@@ -261,7 +325,7 @@ function salvarReciboHistorico(silent=false){
   const n = Number(num.replace(/\D/g,"")) || 0;
   if(n > getSeq()) setSeq(n);
 
-  // prepara o próximo número automaticamente
+  // prepara próximo número
   qs("#recNumero").value = pad(getSeq() + 1, 6);
 
   renderHistorico();
@@ -270,68 +334,36 @@ function salvarReciboHistorico(silent=false){
   if(!silent) alert("Recibo salvo no histórico!");
 }
 
-function delRecibo(id){
-  setRecibos(getRecibos().filter(r => r.id !== id));
-  renderHistorico();
-}
-
-function sumCondominio(recibos){ return recibos.reduce((acc,r)=> acc + (r.vCondo || 0), 0); }
-function sumAgua(recibos){ return recibos.reduce((acc,r)=> acc + (r.vAgua || 0), 0); }
-function sumTotal(recibos){ return recibos.reduce((acc,r)=> acc + (r.total || 0), 0); }
-function sumDespesas(despesas){ return despesas.reduce((acc,d)=> acc + (d.valor || 0), 0); }
-
-/* ===== PDF Recibo ===== */
-function pdfHeader(doc, title, headerY){
-  doc.setFont("helvetica","bold");
-  doc.setFontSize(14);
-  doc.text(title, 14, headerY);
-
-  doc.setFont("helvetica","normal");
-  doc.setFontSize(10);
-  doc.text(`${FIXOS.rua} / ${FIXOS.bairroUf} — CEP ${FIXOS.cep} — ${FIXOS.cidade}/RJ`, 14, headerY + 6);
-
-  doc.setDrawColor(60);
-  doc.line(14, headerY + 9, 196, headerY + 9);
-
-  return headerY + 22;
-}
-
-async function gerarPDFRecibo(){
-  // salva no histórico automaticamente
+/* ===== Gerar PDF do recibo (novo) ===== */
+async function gerarPDFReciboNovo(){
   salvarReciboHistorico(true);
+  const recibos = getRecibos();
+  const last = recibos[recibos.length - 1];
+  if(!last){ alert("Não foi possível localizar o recibo salvo."); return; }
+  await gerarPDFReciboDeItem(last);
+}
 
+/* ===== Gerar PDF do recibo (antigo do histórico) ===== */
+async function gerarPDFReciboDeItem(item){
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF({ unit:"mm", format:"a4" });
 
   const dataUrl = await loadLogoDataURL();
   const { headerY } = addLogoToPdf(doc, dataUrl);
 
-  // pega o último recibo salvo
-  const recibos = getRecibos();
-  const last = recibos[recibos.length - 1];
+  const end = enderecoCompleto(item.apto);
 
-  const num = last?.num || "000000";
-  const nome = last?.nome || "";
-  const apto = last?.apto || qs("#recApto").value;
+  let y = pdfHeader(doc, `RECIBO Nº ${item.num}`, headerY);
 
-  const vCondo = last?.vCondo || 0;
-  const vAgua  = last?.vAgua || 0;
-  const total  = last?.total || 0;
-
-  const refTxt = (vCondo>0 && vAgua>0) ? "Condomínio e Água" : (vCondo>0 ? "Condomínio" : "Água");
-  const ref = `${MESES[last?.refMes ?? 0]}/${last?.refAno ?? new Date().getFullYear()}`;
-  const emissao = `${FIXOS.cidade}, dia ${last?.emDia ?? 1} de ${MESES[last?.emMes ?? 0]} de ${last?.emAno ?? new Date().getFullYear()}`;
-
-  const end = enderecoCompleto(apto);
-
-  let y = pdfHeader(doc, `RECIBO Nº ${num}`, headerY);
+  const refTxt = referenteTextoFromValues(item.vCondo || 0, item.vAgua || 0);
+  const ref = refLabel(item.refMes, item.refAno);
+  const emissao = emissaoLabel(item.emDia, item.emMes, item.emAno);
 
   doc.setFont("helvetica","normal");
   doc.setFontSize(12);
-
   const lh = 8;
 
-  doc.text(`Recebido de: ${nome || "________________________________________"}`, 14, y); y += lh;
+  doc.text(`Recebido de: ${item.nome || "________________________________________"}`, 14, y); y += lh;
   doc.text(`Endereço: ${end}`, 14, y); y += lh;
   doc.text(`CEP: ${FIXOS.cep}`, 14, y); y += lh;
 
@@ -342,27 +374,117 @@ async function gerarPDFRecibo(){
   doc.text("Valores recebidos:", 14, y); y += lh;
 
   doc.setFont("helvetica","normal");
-  doc.text(`Condomínio: ${numberToBRL(vCondo)}`, 14, y); y += lh;
-  doc.text(`Água: ${numberToBRL(vAgua)}`, 14, y); y += lh;
+  doc.text(`Condomínio: ${numberToBRL(item.vCondo || 0)}`, 14, y); y += lh;
+  doc.text(`Água: ${numberToBRL(item.vAgua || 0)}`, 14, y); y += lh;
 
   doc.setFont("helvetica","bold");
-  doc.text(`TOTAL: ${numberToBRL(total)}`, 14, y); y += (lh+4);
+  doc.text(`TOTAL: ${numberToBRL(item.total || 0)}`, 14, y); y += (lh+4);
 
   doc.setFont("helvetica","normal");
   doc.text(emissao, 14, y); y += (lh+6);
 
   doc.text(`Emitente: ${FIXOS.emitente}`, 14, y);
 
-  doc.save(`Recibo_${num}_Apto_${apto}.pdf`);
+  doc.save(`Recibo_${item.num}_Apto_${item.apto}.pdf`);
 }
 
-/* ===== PDF Prestação de Contas (Ano) ===== */
-async function gerarPDFPrestacaoAno(){
-  const ano = Number(qs("#histAno").value);
-  if(!ano || isNaN(ano)){
-    alert("Preencha o ANO no Histórico e clique em Aplicar antes de gerar o PDF.");
-    return;
+/* ===== Histórico: render ===== */
+function delRecibo(id){
+  setRecibos(getRecibos().filter(r => r.id !== id));
+  renderHistorico();
+}
+
+function renderHistorico(){
+  const { ano, mes } = getFiltro();
+
+  const recibosAll = getRecibos();
+  const recibosFiltrados = recibosAll.filter(r => sameRef(r, ano, mes));
+
+  const despesasAll = getDespesas();
+  const despesasFiltradas = despesasAll.filter(d => {
+    if(ano && d.ano !== ano) return false;
+    if(mes !== null && d.mes !== mes) return false;
+    return true;
+  });
+
+  const totalCondo = sumCondo(recibosFiltrados);
+  const totalAgua = sumAgua(recibosFiltrados);
+  const totalGeral = sumTotal(recibosFiltrados);
+  const totalDespesas = sumDesp(despesasFiltradas);
+
+  const saldoMes = totalCondo - totalDespesas;
+
+  let saldoAcum = null;
+  if(ano && mes !== null){
+    saldoAcum = saldoAcumuladoAte(ano, mes);
   }
+
+  qs("#histTotais").innerHTML = `
+    <div><b>Entrou (Condomínio):</b> ${numberToBRL(totalCondo)}</div>
+    <div><b>Entrou (Água):</b> ${numberToBRL(totalAgua)}</div>
+    <div><b>Total geral (Condomínio + Água):</b> ${numberToBRL(totalGeral)}</div>
+    <div style="margin-top:6px;"><b>Saiu (Despesas do condomínio):</b> ${numberToBRL(totalDespesas)}</div>
+    <div><b>Saldo do mês (Condomínio - Despesas):</b> ${numberToBRL(saldoMes)}</div>
+    ${ (saldoAcum !== null) ? `<div><b>Caixa acumulado até este mês:</b> ${numberToBRL(saldoAcum)}</div>` : `<div class="muted">Para ver “Caixa acumulado”, selecione um mês específico.</div>` }
+  `;
+
+  const tbody = qs("#tbodyHist");
+  tbody.innerHTML = "";
+
+  recibosFiltrados
+    .slice()
+    .sort((a,b)=> a.num.localeCompare(b.num))
+    .forEach(r=>{
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+        <td>${r.num}</td>
+        <td>${MESES[r.refMes]}/${r.refAno}</td>
+        <td>${r.apto}</td>
+        <td>${r.nome || ""}</td>
+        <td>${numberToBRL(r.vCondo || 0)}</td>
+        <td>${numberToBRL(r.vAgua || 0)}</td>
+        <td><b>${numberToBRL(r.total || 0)}</b></td>
+        <td>${String(r.emDia).padStart(2,"0")}/${String(r.emMes+1).padStart(2,"0")}/${r.emAno}</td>
+        <td class="actions">
+          <button class="linkbtn" data-pdf="${r.id}">Baixar PDF</button>
+          <button class="linkbtn" data-del="${r.id}">Excluir</button>
+        </td>
+      `;
+      tbody.appendChild(tr);
+    });
+
+  tbody.querySelectorAll("[data-del]").forEach(btn=>{
+    btn.addEventListener("click", ()=> delRecibo(btn.dataset.del));
+  });
+
+  tbody.querySelectorAll("[data-pdf]").forEach(btn=>{
+    btn.addEventListener("click", async ()=>{
+      const id = btn.dataset.pdf;
+      const item = getRecibos().find(r => r.id === id);
+      if(!item){ alert("Recibo não encontrado."); return; }
+      await gerarPDFReciboDeItem(item);
+    });
+  });
+}
+
+/* ===== PDF Prestação do MÊS ===== */
+async function gerarPDFPrestacaoMes(){
+  const ano = Number(qs("#histAno").value);
+  const mes = Number(qs("#histMes").value);
+
+  if(!ano || isNaN(ano)){ alert("Preencha o ANO no histórico."); return; }
+  if(!(mes >= 0 && mes <= 11)){ alert("Selecione um MÊS (não pode ser 'Todos')."); return; }
+
+  const recibosMes = getRecibos().filter(r => r.refAno === ano && r.refMes === mes);
+  const despesasMes = getDespesas().filter(d => d.ano === ano && d.mes === mes);
+
+  const entrouCondo = sumCondo(recibosMes);
+  const entrouAgua = sumAgua(recibosMes);
+  const totalGeral = sumTotal(recibosMes);
+  const saiuDesp = sumDesp(despesasMes);
+
+  const saldoMes = entrouCondo - saiuDesp;
+  const saldoAcum = saldoAcumuladoAte(ano, mes);
 
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF({ unit:"mm", format:"a4" });
@@ -370,25 +492,93 @@ async function gerarPDFPrestacaoAno(){
   const dataUrl = await loadLogoDataURL();
   const { headerY } = addLogoToPdf(doc, dataUrl);
 
+  let y = pdfHeader(doc, `PRESTAÇÃO DE CONTAS — ${MESES[mes]}/${ano}`, headerY);
+
+  doc.setFont("helvetica","normal");
+  doc.setFontSize(12);
+
+  doc.text(`Entrou (Condomínio): ${numberToBRL(entrouCondo)}`, 14, y); y += 8;
+  doc.text(`Entrou (Água): ${numberToBRL(entrouAgua)}`, 14, y); y += 8;
+  doc.text(`Total geral: ${numberToBRL(totalGeral)}`, 14, y); y += 8;
+
+  doc.text(`Saiu (Despesas do condomínio): ${numberToBRL(saiuDesp)}`, 14, y); y += 8;
+
+  doc.setFont("helvetica","bold");
+  doc.text(`Saldo do mês (Condomínio - Despesas): ${numberToBRL(saldoMes)}`, 14, y); y += 10;
+  doc.text(`Caixa acumulado até este mês: ${numberToBRL(saldoAcum)}`, 14, y); y += 10;
+
+  doc.setFont("helvetica","bold");
+  doc.text("Despesas do mês:", 14, y); y += 8;
+
+  doc.setFont("helvetica","normal");
+  doc.setFontSize(10);
+
+  if(despesasMes.length === 0){
+    doc.text("Nenhuma despesa cadastrada neste mês.", 14, y);
+  } else {
+    const sorted = despesasMes.slice().sort((a,b)=>{
+      if(a.dia !== b.dia) return a.dia - b.dia;
+      return (a.cat || "").localeCompare(b.cat || "");
+    });
+
+    for(const d of sorted){
+      const linha =
+        `${String(d.dia).padStart(2,"0")}/${String(d.mes+1).padStart(2,"0")}/${d.ano} — ` +
+        `${d.cat} — ${numberToBRL(d.valor)}${d.desc ? " — " + d.desc : ""}`;
+
+      const split = doc.splitTextToSize(linha, 180);
+      doc.text(split, 14, y);
+      y += split.length * 5;
+      if(y > 275){
+        doc.addPage();
+        y = 20;
+      }
+    }
+  }
+
+  doc.setFontSize(10);
+  doc.text(`Emitente: ${FIXOS.emitente}`, 14, 285);
+
+  doc.save(`Prestacao_${MESES[mes]}_${ano}.pdf`);
+}
+
+/* ===== PDF Prestação do ANO ===== */
+async function gerarPDFPrestacaoAno(){
+  const ano = Number(qs("#histAno").value);
+  if(!ano || isNaN(ano)){
+    alert("Preencha o ANO no Histórico antes de gerar o PDF.");
+    return;
+  }
+
   const recibosAno = getRecibos().filter(r => r.refAno === ano);
   const despesasAno = getDespesas().filter(d => d.ano === ano);
 
-  const totalCondo = sumCondominio(recibosAno);
+  const totalCondo = sumCondo(recibosAno);
   const totalAgua = sumAgua(recibosAno);
-  const totalDesp = sumDespesas(despesasAno);
-  const caixaCondo = totalCondo - totalDesp;
+  const totalGeral = sumTotal(recibosAno);
+  const totalDesp = sumDesp(despesasAno);
+
+  const caixaAno = totalCondo - totalDesp;
+
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ unit:"mm", format:"a4" });
+
+  const dataUrl = await loadLogoDataURL();
+  const { headerY } = addLogoToPdf(doc, dataUrl);
 
   let y = pdfHeader(doc, `PRESTAÇÃO DE CONTAS — ${ano}`, headerY);
 
   doc.setFont("helvetica","normal");
   doc.setFontSize(12);
 
-  doc.text(`Total arrecadado (Condomínio): ${numberToBRL(totalCondo)}`, 14, y); y += 8;
-  doc.text(`Total arrecadado (Água): ${numberToBRL(totalAgua)}`, 14, y); y += 8;
-  doc.text(`Total de despesas (Condomínio): ${numberToBRL(totalDesp)}`, 14, y); y += 8;
+  doc.text(`Entrou (Condomínio): ${numberToBRL(totalCondo)}`, 14, y); y += 8;
+  doc.text(`Entrou (Água): ${numberToBRL(totalAgua)}`, 14, y); y += 8;
+  doc.text(`Total geral: ${numberToBRL(totalGeral)}`, 14, y); y += 8;
+
+  doc.text(`Saiu (Despesas do condomínio): ${numberToBRL(totalDesp)}`, 14, y); y += 8;
 
   doc.setFont("helvetica","bold");
-  doc.text(`CAIXA do Condomínio: ${numberToBRL(caixaCondo)}`, 14, y); y += 10;
+  doc.text(`Caixa do ano (Condomínio - Despesas): ${numberToBRL(caixaAno)}`, 14, y); y += 10;
 
   doc.setFont("helvetica","bold");
   doc.text("Despesas do ano:", 14, y); y += 8;
@@ -424,7 +614,7 @@ async function gerarPDFPrestacaoAno(){
   doc.setFontSize(10);
   doc.text(`Emitente: ${FIXOS.emitente}`, 14, 285);
 
-  doc.save(`Prestacao_de_Contas_${ano}.pdf`);
+  doc.save(`Prestacao_Ano_${ano}.pdf`);
 }
 
 /* ===== Despesas ===== */
@@ -489,59 +679,6 @@ function renderDespesas(){
   qs("#despTotais").innerHTML = `<div><b>Total de despesas cadastradas:</b> ${numberToBRL(totalDesp)}</div>`;
 }
 
-function renderHistorico(){
-  const anoFiltro = Number(qs("#histAno").value) || null;
-
-  const recibosAll = getRecibos();
-  const recibos = anoFiltro ? recibosAll.filter(r=> r.refAno === anoFiltro) : recibosAll;
-
-  const despesasAll = getDespesas();
-  const despesas = anoFiltro ? despesasAll.filter(d=> d.ano === anoFiltro) : despesasAll;
-
-  const totalCondo = sumCondominio(recibos);
-  const totalAgua = sumAgua(recibos);
-  const totalGeral = sumTotal(recibos);
-
-  const totalDesp = sumDespesas(despesas);
-  const caixaCondo = totalCondo - totalDesp;
-
-  qs("#histTotais").innerHTML = `
-    <div><b>Total arrecadado (somente Condomínio):</b> ${numberToBRL(totalCondo)}</div>
-    <div><b>Total arrecadado (Água):</b> ${numberToBRL(totalAgua)}</div>
-    <div><b>Total geral (Condomínio + Água):</b> ${numberToBRL(totalGeral)}</div>
-    <div style="margin-top:6px;"><b>Total de despesas (Condomínio):</b> ${numberToBRL(totalDesp)}</div>
-    <div><b>Caixa do Condomínio (Condomínio - Despesas):</b> ${numberToBRL(caixaCondo)}</div>
-  `;
-
-  const tbody = qs("#tbodyHist");
-  tbody.innerHTML = "";
-
-  recibos
-    .slice()
-    .sort((a,b)=> a.num.localeCompare(b.num))
-    .forEach(r=>{
-      const tr = document.createElement("tr");
-      tr.innerHTML = `
-        <td>${r.num}</td>
-        <td>${MESES[r.refMes]}/${r.refAno}</td>
-        <td>${r.apto}</td>
-        <td>${r.nome || ""}</td>
-        <td>${numberToBRL(r.vCondo || 0)}</td>
-        <td>${numberToBRL(r.vAgua || 0)}</td>
-        <td><b>${numberToBRL(r.total || 0)}</b></td>
-        <td>${String(r.emDia).padStart(2,"0")}/${String(r.emMes+1).padStart(2,"0")}/${r.emAno}</td>
-        <td class="actions">
-          <button class="linkbtn" data-del="${r.id}">Excluir</button>
-        </td>
-      `;
-      tbody.appendChild(tr);
-    });
-
-  tbody.querySelectorAll("[data-del]").forEach(btn=>{
-    btn.addEventListener("click", ()=> delRecibo(btn.dataset.del));
-  });
-}
-
 /* ===== Eventos ===== */
 function wireEvents(){
   initTabs();
@@ -558,11 +695,12 @@ function wireEvents(){
   });
 
   qs("#btnProximo").addEventListener("click", nextRecibo);
-  qs("#btnGerarPDF").addEventListener("click", gerarPDFRecibo);
+  qs("#btnGerarPDF").addEventListener("click", gerarPDFReciboNovo);
 
-  qs("#btnAplicarAno").addEventListener("click", renderHistorico);
+  qs("#btnAplicarFiltro").addEventListener("click", renderHistorico);
 
-  qs("#btnPDFPrestacao").addEventListener("click", gerarPDFPrestacaoAno);
+  qs("#btnPDFMes").addEventListener("click", gerarPDFPrestacaoMes);
+  qs("#btnPDFAno").addEventListener("click", gerarPDFPrestacaoAno);
 
   qs("#btnLimparHist").addEventListener("click", ()=>{
     const ok = confirm("Apagar TODO o histórico de recibos deste navegador?");
@@ -597,6 +735,7 @@ document.addEventListener("DOMContentLoaded", ()=>{
   qs("#recAnoRef").value = t.ano;
 
   qs("#histAno").value = t.ano;
+  qs("#histMes").value = "-1"; // todos
 
   qs("#despDia").value = String(t.dia);
   qs("#despMes").value = String(t.mes);
