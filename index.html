@@ -193,18 +193,42 @@
           <div class="row between">
             <div>
               <h2>Histórico de Recibos</h2>
-              <p class="muted">Todos os recibos + total arrecadado do condomínio + despesas + caixa.</p>
+              <p class="muted">Aqui você baixa recibos antigos e gera prestação mensal/ano com caixa.</p>
             </div>
             <div class="inline">
               <div class="field smallfield">
-                <label>Filtrar ano</label>
+                <label>Ano</label>
                 <input id="histAno" type="number" min="2000" max="2100" />
               </div>
-              <button class="btn ghost" id="btnAplicarAno">Aplicar</button>
+              <div class="field smallfield">
+                <label>Mês</label>
+                <select id="histMes">
+                  <option value="-1">Todos</option>
+                  <option value="0">Janeiro</option>
+                  <option value="1">Fevereiro</option>
+                  <option value="2">Março</option>
+                  <option value="3">Abril</option>
+                  <option value="4">Maio</option>
+                  <option value="5">Junho</option>
+                  <option value="6">Julho</option>
+                  <option value="7">Agosto</option>
+                  <option value="8">Setembro</option>
+                  <option value="9">Outubro</option>
+                  <option value="10">Novembro</option>
+                  <option value="11">Dezembro</option>
+                </select>
+              </div>
+              <button class="btn ghost" id="btnAplicarFiltro">Aplicar</button>
             </div>
           </div>
 
           <div class="totals" id="histTotais"></div>
+
+          <div class="row">
+            <button class="btn" id="btnPDFMes">Baixar Prestação do Mês (PDF)</button>
+            <button class="btn" id="btnPDFAno">Baixar Prestação do Ano (PDF)</button>
+            <button class="btn danger" id="btnLimparHist">Limpar Histórico</button>
+          </div>
 
           <div class="tablewrap">
             <table>
@@ -223,11 +247,6 @@
               </thead>
               <tbody id="tbodyHist"></tbody>
             </table>
-          </div>
-
-          <div class="row">
-            <button class="btn" id="btnPDFPrestacao">Gerar PDF de Prestação (Ano)</button>
-            <button class="btn danger" id="btnLimparHist">Limpar Histórico</button>
           </div>
         </div>
       </section>
