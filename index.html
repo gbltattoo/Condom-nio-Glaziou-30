@@ -3,21 +3,16 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Condomínio Rua Glaziou, 30 — Recibos e Despesas</title>
-
+  <title>Condomínio Rua Glaziou, 30 — Sistema Online</title>
   <link rel="stylesheet" href="style.css" />
-
-  <!-- jsPDF -->
-  <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
 </head>
-
 <body>
   <header class="topbar">
     <div class="topbrand">
       <img src="logo.png" alt="Logo Glaziou 30" class="brandlogo" />
       <div>
         <h1>Condomínio — Rua Glaziou, 30</h1>
-        <p class="muted">Recibos • Histórico • Despesas (tudo salvo neste navegador)</p>
+        <p class="muted">Sistema online com recibos, retroativos, saldo, despesas e histórico sincronizado.</p>
       </div>
     </div>
   </header>
@@ -25,108 +20,120 @@
   <main class="layout">
     <aside class="sidebar">
       <button class="sidebtn active" data-tab="recibo">Recibo</button>
-      <button class="sidebtn" data-tab="historico">Histórico</button>
+      <button class="sidebtn" data-tab="retroativo">Retroativo</button>
+      <button class="sidebtn" data-tab="apartamentos">Apartamentos</button>
       <button class="sidebtn" data-tab="despesas">Despesas</button>
+      <button class="sidebtn" data-tab="historico">Histórico</button>
 
       <div class="sidebox">
-        <div class="muted small">Fixos:</div>
+        <div class="muted small">Fixos</div>
         <div><b>Endereço:</b> Rua Glaziou, 30 / Pilares - RJ</div>
         <div><b>CEP:</b> 20750-010</div>
         <div><b>Cidade:</b> Rio de Janeiro</div>
         <div><b>Emitente:</b> Gabriel Brito Cirilo</div>
+        <div><b>Taxa padrão:</b> R$ 160,00</div>
+        <div><b>Isento padrão:</b> 101 Fundos</div>
       </div>
     </aside>
 
     <section class="content">
-
-      <!-- ================== RECIBO ================== -->
+      <!-- RECIBO NORMAL -->
       <section class="panel" id="tab-recibo">
-        <div class="grid">
+        <div class="grid two">
           <div class="card">
-            <h2>Gerar Recibo (PDF)</h2>
+            <h2>Recibo normal</h2>
 
             <div class="row">
               <div class="field">
-                <label>Nº do recibo (automático)</label>
+                <label>Nº do recibo</label>
                 <div class="inline">
-                  <input id="recNumero" type="text" placeholder="Automático" />
+                  <input id="recNumero" type="text" placeholder="Automático" readonly />
                   <button class="btn small" id="btnProximo">Próximo</button>
                 </div>
-                <small class="muted">Já vem preenchido automaticamente. “Próximo” é opcional.</small>
               </div>
 
               <div class="field">
                 <label>Apartamento</label>
-                <select id="recApto">
-                  <option>101</option>
-                  <option>101 Fundos</option>
-                  <option>201</option>
-                  <option>201 Sala</option>
-                  <option>201 Fundos</option>
-                  <option>301</option>
-                  <option>301 Sala</option>
-                  <option>301 Fundos</option>
-                </select>
+                <select id="recApto"></select>
               </div>
             </div>
 
             <div class="row">
               <div class="field">
-                <label>Recebido de (nome do inquilino/proprietário)</label>
-                <input id="recNome" type="text" placeholder="Ex: Maria Silva" />
+                <label>Recebido de</label>
+                <input id="recNome" type="text" placeholder="Nome do morador/proprietário" />
               </div>
             </div>
 
             <div class="row">
               <div class="field">
-                <label>Referente ao mês</label>
-                <select id="recMesRef">
-                  <option value="0">Janeiro</option>
-                  <option value="1">Fevereiro</option>
-                  <option value="2">Março</option>
-                  <option value="3">Abril</option>
-                  <option value="4">Maio</option>
-                  <option value="5">Junho</option>
-                  <option value="6">Julho</option>
-                  <option value="7">Agosto</option>
-                  <option value="8">Setembro</option>
-                  <option value="9">Outubro</option>
-                  <option value="10">Novembro</option>
-                  <option value="11">Dezembro</option>
-                </select>
+                <label>Mês de referência</label>
+                <select id="recMesRef"></select>
               </div>
 
               <div class="field">
                 <label>Ano de referência</label>
-                <input id="recAnoRef" type="number" min="2000" max="2100" />
+                <input id="recAnoRef" type="number" min="2020" max="2100" />
               </div>
-            </div>
-
-            <h3>O que foi pago</h3>
-            <div class="row">
-              <label class="check">
-                <input type="checkbox" id="ckCondo" checked />
-                <span>Condomínio</span>
-              </label>
-
-              <label class="check">
-                <input type="checkbox" id="ckAgua" />
-                <span>Água</span>
-              </label>
             </div>
 
             <div class="row">
               <div class="field">
-                <label>Valor Condomínio (R$)</label>
-                <input id="recValorCondo" type="text" inputmode="decimal" placeholder="Ex: 160,00" />
+                <label>Saldo anterior da unidade</label>
+                <input id="recSaldoAnterior" type="text" readonly />
               </div>
+
               <div class="field">
-                <label>Valor Água (R$)</label>
-                <input id="recValorAgua" type="text" inputmode="decimal" placeholder="Ex: 80,00" />
+                <label>Ajuste manual do saldo anterior</label>
+                <input id="recAjusteSaldo" type="text" inputmode="decimal" placeholder="Ex: 0,00" value="0,00" />
               </div>
+            </div>
+
+            <div class="row">
               <div class="field">
-                <label>Total recebido (automático)</label>
-                <input id="recTotal" type="text" readonly />
+                <label>Condomínio do mês</label>
+                <input id="recCondominio" type="text" inputmode="decimal" />
+              </div>
+
+              <div class="field">
+                <label>Água do mês</label>
+                <input id="recAgua" type="text" inputmode="decimal" placeholder="Ex: 80,00" value="0,00" />
+              </div>
+            </div>
+
+            <div class="row">
+              <div class="field">
+                <label>Cobrança extra do proprietário</label>
+                <input id="recExtra" type="text" inputmode="decimal" placeholder="Ex: manutenção paga pelo condomínio" value="0,00" />
+              </div>
+
+              <div class="field">
+                <label>Desconto por obra estrutural</label>
+                <input id="recDescontoObra" type="text" inputmode="decimal" placeholder="Ex: 60,00" value="0,00" />
+              </div>
+            </div>
+
+            <div class="row">
+              <div class="field">
+                <label>Valor pago nesta data</label>
+                <input id="recPagoAgora" type="text" inputmode="decimal" placeholder="Ex: 100,00" value="0,00" />
+              </div>
+
+              <div class="field">
+                <label>Saldo restante da unidade</label>
+                <input id="recSaldoRestante" type="text" readonly />
+              </div>
+            </div>
+
+            <div class="row">
+              <div class="field">
+                <label>Situação</label>
+                <input id="recSituacao" type="text" readonly />
+              </div>
+
+              <div class="field">
+                <label>Total de encargos desta referência</label>
+                <input id="recTotalReferencia" type="text" readonly />
               </div>
             </div>
 
@@ -134,49 +141,28 @@
             <div class="row">
               <div class="field">
                 <label>Dia</label>
-                <select id="recDia">
-                  <option>1</option><option>2</option><option>3</option><option>4</option><option>5</option>
-                  <option>6</option><option>7</option><option>8</option><option>9</option><option>10</option>
-                  <option>11</option><option>12</option><option>13</option><option>14</option><option>15</option>
-                  <option>16</option><option>17</option><option>18</option><option>19</option><option>20</option>
-                  <option>21</option><option>22</option><option>23</option><option>24</option><option>25</option>
-                  <option>26</option><option>27</option><option>28</option><option>29</option><option>30</option>
-                  <option>31</option>
-                </select>
+                <select id="recDia"></select>
               </div>
 
               <div class="field">
                 <label>Mês</label>
-                <select id="recMesEmissao">
-                  <option value="0">Janeiro</option>
-                  <option value="1">Fevereiro</option>
-                  <option value="2">Março</option>
-                  <option value="3">Abril</option>
-                  <option value="4">Maio</option>
-                  <option value="5">Junho</option>
-                  <option value="6">Julho</option>
-                  <option value="7">Agosto</option>
-                  <option value="8">Setembro</option>
-                  <option value="9">Outubro</option>
-                  <option value="10">Novembro</option>
-                  <option value="11">Dezembro</option>
-                </select>
+                <select id="recMesEmissao"></select>
               </div>
 
               <div class="field">
                 <label>Ano</label>
-                <input id="recAnoEmissao" type="number" min="2000" max="2100" />
+                <input id="recAnoEmissao" type="number" min="2020" max="2100" />
               </div>
             </div>
 
             <div class="row">
-              <button class="btn" id="btnGerarPDF">Gerar PDF (salva no histórico)</button>
+              <button class="btn" id="btnGerarRecibo">Gerar recibo e salvar</button>
             </div>
 
             <div class="note">
-              <b>Endereço (no recibo):</b> <span class="muted" id="enderecoLinha"></span><br/>
+              <b>Endereço:</b> <span id="enderecoLinha"></span><br/>
               <b>CEP:</b> 20750-010<br/>
-              <b>Cidade fixa:</b> Rio de Janeiro • <b>Emitente fixo:</b> Gabriel Brito Cirilo
+              <b>Observação:</b> desconto por obra dá baixa, mas não entra no caixa.
             </div>
           </div>
 
@@ -187,102 +173,131 @@
         </div>
       </section>
 
-      <!-- ================== HISTÓRICO ================== -->
-      <section class="panel hidden" id="tab-historico">
+      <!-- RETROATIVO -->
+      <section class="panel hidden" id="tab-retroativo">
+        <div class="grid two">
+          <div class="card">
+            <h2>Recibo retroativo / segunda via</h2>
+            <p class="muted">Serve para comprovar meses antigos. Não entra no caixa mensal.</p>
+
+            <div class="row">
+              <div class="field">
+                <label>Nº do recibo</label>
+                <input id="retroNumero" type="text" placeholder="Automático" readonly />
+              </div>
+
+              <div class="field">
+                <label>Apartamento</label>
+                <select id="retroApto"></select>
+              </div>
+            </div>
+
+            <div class="row">
+              <div class="field">
+                <label>Recebido de</label>
+                <input id="retroNome" type="text" placeholder="Nome do morador/proprietário" />
+              </div>
+            </div>
+
+            <div class="row">
+              <div class="field">
+                <label>Mês inicial</label>
+                <select id="retroMesInicio"></select>
+              </div>
+              <div class="field">
+                <label>Ano inicial</label>
+                <input id="retroAnoInicio" type="number" min="2020" max="2100" />
+              </div>
+            </div>
+
+            <div class="row">
+              <div class="field">
+                <label>Mês final</label>
+                <select id="retroMesFim"></select>
+              </div>
+              <div class="field">
+                <label>Ano final</label>
+                <input id="retroAnoFim" type="number" min="2020" max="2100" />
+              </div>
+            </div>
+
+            <div class="row">
+              <label class="check">
+                <input type="checkbox" id="retroIncluiCondo" checked />
+                <span>Incluir condomínio</span>
+              </label>
+
+              <label class="check">
+                <input type="checkbox" id="retroIncluiAgua" />
+                <span>Incluir água</span>
+              </label>
+            </div>
+
+            <div class="row">
+              <div class="field">
+                <label>Valor da água total (opcional)</label>
+                <input id="retroAguaTotal" type="text" inputmode="decimal" value="0,00" />
+              </div>
+
+              <div class="field">
+                <label>Total retroativo</label>
+                <input id="retroTotal" type="text" readonly />
+              </div>
+            </div>
+
+            <div class="row">
+              <button class="btn" id="btnGerarRetroativo">Gerar retroativo e salvar</button>
+            </div>
+          </div>
+
+          <div class="card">
+            <h2>Prévia retroativa</h2>
+            <div class="preview" id="retroPreview"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- APARTAMENTOS -->
+      <section class="panel hidden" id="tab-apartamentos">
         <div class="card">
-          <div class="row between">
-            <div>
-              <h2>Histórico de Recibos</h2>
-              <p class="muted">Aqui você baixa recibos antigos e gera prestação mensal/ano com caixa.</p>
-            </div>
-            <div class="inline">
-              <div class="field smallfield">
-                <label>Ano</label>
-                <input id="histAno" type="number" min="2000" max="2100" />
-              </div>
-              <div class="field smallfield">
-                <label>Mês</label>
-                <select id="histMes">
-                  <option value="-1">Todos</option>
-                  <option value="0">Janeiro</option>
-                  <option value="1">Fevereiro</option>
-                  <option value="2">Março</option>
-                  <option value="3">Abril</option>
-                  <option value="4">Maio</option>
-                  <option value="5">Junho</option>
-                  <option value="6">Julho</option>
-                  <option value="7">Agosto</option>
-                  <option value="8">Setembro</option>
-                  <option value="9">Outubro</option>
-                  <option value="10">Novembro</option>
-                  <option value="11">Dezembro</option>
-                </select>
-              </div>
-              <button class="btn ghost" id="btnAplicarFiltro">Aplicar</button>
-            </div>
-          </div>
-
-          <div class="totals" id="histTotais"></div>
-
-          <div class="row">
-            <button class="btn" id="btnPDFMes">Baixar Prestação do Mês (PDF)</button>
-            <button class="btn" id="btnPDFAno">Baixar Prestação do Ano (PDF)</button>
-            <button class="btn danger" id="btnLimparHist">Limpar Histórico</button>
-          </div>
+          <h2>Apartamentos</h2>
+          <p class="muted">Marque isento para o síndico. Isento não gera condomínio, apenas água.</p>
 
           <div class="tablewrap">
             <table>
               <thead>
                 <tr>
-                  <th>Nº</th>
-                  <th>Ref.</th>
-                  <th>Apto</th>
-                  <th>Nome</th>
-                  <th>Condomínio</th>
-                  <th>Água</th>
-                  <th>Total</th>
-                  <th>Emissão</th>
+                  <th>Apartamento</th>
+                  <th>Isento de condomínio</th>
+                  <th>Morador salvo</th>
+                  <th>Saldo atual</th>
                   <th>Ações</th>
                 </tr>
               </thead>
-              <tbody id="tbodyHist"></tbody>
+              <tbody id="tbodyApartamentos"></tbody>
             </table>
           </div>
         </div>
       </section>
 
-      <!-- ================== DESPESAS ================== -->
+      <!-- DESPESAS -->
       <section class="panel hidden" id="tab-despesas">
-        <div class="grid">
+        <div class="grid two">
           <div class="card">
-            <h2>Despesas do Condomínio</h2>
-            <p class="muted">Dia, mês e ano ficam automáticos (você pode ajustar se quiser).</p>
+            <h2>Despesas do condomínio</h2>
 
             <div class="row">
               <div class="field">
                 <label>Dia</label>
-                <select id="despDia">
-                  <option>1</option><option>2</option><option>3</option><option>4</option><option>5</option>
-                  <option>6</option><option>7</option><option>8</option><option>9</option><option>10</option>
-                  <option>11</option><option>12</option><option>13</option><option>14</option><option>15</option>
-                  <option>16</option><option>17</option><option>18</option><option>19</option><option>20</option>
-                  <option>21</option><option>22</option><option>23</option><option>24</option><option>25</option>
-                  <option>26</option><option>27</option><option>28</option><option>29</option><option>30</option>
-                  <option>31</option>
-                </select>
+                <select id="despDia"></select>
               </div>
               <div class="field">
                 <label>Mês</label>
-                <select id="despMes">
-                  <option value="0">Janeiro</option><option value="1">Fevereiro</option><option value="2">Março</option>
-                  <option value="3">Abril</option><option value="4">Maio</option><option value="5">Junho</option>
-                  <option value="6">Julho</option><option value="7">Agosto</option><option value="8">Setembro</option>
-                  <option value="9">Outubro</option><option value="10">Novembro</option><option value="11">Dezembro</option>
-                </select>
+                <select id="despMes"></select>
               </div>
               <div class="field">
                 <label>Ano</label>
-                <input id="despAno" type="number" min="2000" max="2100" />
+                <input id="despAno" type="number" min="2020" max="2100" />
               </div>
             </div>
 
@@ -305,14 +320,13 @@
 
             <div class="row">
               <div class="field">
-                <label>Descrição (opcional)</label>
-                <input id="despDesc" type="text" placeholder="Ex: Zelador do mês / compra de produtos..." />
+                <label>Descrição</label>
+                <input id="despDesc" type="text" placeholder="Ex: compra de produtos, conserto, zelador..." />
               </div>
             </div>
 
             <div class="row">
               <button class="btn" id="btnAddDesp">Adicionar despesa</button>
-              <button class="btn danger" id="btnLimparDesp">Limpar despesas</button>
             </div>
           </div>
 
@@ -329,14 +343,64 @@
                     <th>Ações</th>
                   </tr>
                 </thead>
-                <tbody id="tbodyDesp"></tbody>
+                <tbody id="tbodyDespesas"></tbody>
               </table>
             </div>
-            <div class="totals" id="despTotais"></div>
           </div>
         </div>
       </section>
 
+      <!-- HISTÓRICO -->
+      <section class="panel hidden" id="tab-historico">
+        <div class="card">
+          <div class="row between">
+            <div>
+              <h2>Histórico online</h2>
+              <p class="muted">Baixe recibos antigos, retroativos e prestação de contas.</p>
+            </div>
+
+            <div class="inline">
+              <div class="field smallfield">
+                <label>Ano</label>
+                <input id="histAno" type="number" min="2020" max="2100" />
+              </div>
+
+              <div class="field smallfield">
+                <label>Mês</label>
+                <select id="histMes"></select>
+              </div>
+
+              <button class="btn ghost" id="btnAplicarFiltro">Aplicar</button>
+            </div>
+          </div>
+
+          <div class="totals" id="histTotais"></div>
+
+          <div class="row">
+            <button class="btn" id="btnPDFMes">Baixar prestação do mês</button>
+            <button class="btn" id="btnPDFAno">Baixar prestação do ano</button>
+          </div>
+
+          <div class="tablewrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Nº</th>
+                  <th>Tipo</th>
+                  <th>Ref.</th>
+                  <th>Apto</th>
+                  <th>Nome</th>
+                  <th>Entrou no caixa</th>
+                  <th>Saldo restante</th>
+                  <th>Emissão</th>
+                  <th>Ações</th>
+                </tr>
+              </thead>
+              <tbody id="tbodyHistorico"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
     </section>
   </main>
 
@@ -344,6 +408,6 @@
     <span>Rua Glaziou, 30 / Pilares - RJ • CEP 20750-010 • Rio de Janeiro • Emitente: Gabriel Brito Cirilo</span>
   </footer>
 
-  <script src="app.js"></script>
+  <script type="module" src="app.js"></script>
 </body>
 </html>
