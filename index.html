@@ -13,7 +13,7 @@
       <img src="logo.png" alt="Logo Glaziou 30" class="brandlogo" />
       <div>
         <h1>Condomínio — Rua Glaziou, 30</h1>
-        <p class="muted">Recibos • Retroativos • Apartamentos • Despesas • Histórico</p>
+        <p class="muted">Recibos • Apartamentos • Despesas • Histórico</p>
       </div>
     </div>
   </header>
@@ -21,7 +21,6 @@
   <main class="layout">
     <aside class="sidebar">
       <button class="sidebtn active" data-tab="recibo">Recibo</button>
-      <button class="sidebtn" data-tab="retroativo">Retroativo</button>
       <button class="sidebtn" data-tab="apartamentos">Apartamentos</button>
       <button class="sidebtn" data-tab="despesas">Despesas</button>
       <button class="sidebtn" data-tab="historico">Histórico</button>
@@ -42,7 +41,7 @@
       <section class="panel" id="tab-recibo">
         <div class="grid two">
           <div class="card">
-            <h2>Recibo normal</h2>
+            <h2>Recibo</h2>
 
             <div class="row">
               <div class="field">
@@ -68,13 +67,37 @@
 
             <div class="row">
               <div class="field">
-                <label>Mês de referência</label>
-                <select id="recMesRef"></select>
+                <label>Ano de referência</label>
+                <input id="recAnoRef" type="number" min="2020" max="2100" />
               </div>
 
               <div class="field">
-                <label>Ano de referência</label>
-                <input id="recAnoRef" type="number" min="2020" max="2100" />
+                <label>Dia do recibo</label>
+                <input id="recDiaAtual" type="number" readonly />
+              </div>
+            </div>
+
+            <div class="row">
+              <label class="check">
+                <input type="checkbox" id="ckCondo" checked />
+                <span>Condomínio</span>
+              </label>
+
+              <label class="check">
+                <input type="checkbox" id="ckAgua" />
+                <span>Água</span>
+              </label>
+            </div>
+
+            <div class="row">
+              <div class="field">
+                <label>Valor do condomínio</label>
+                <input id="recCondominio" type="text" readonly />
+              </div>
+
+              <div class="field">
+                <label>Valor da água</label>
+                <input id="recAgua" type="text" inputmode="decimal" value="0,00" />
               </div>
             </div>
 
@@ -85,43 +108,19 @@
               </div>
 
               <div class="field">
-                <label>Ajuste manual do saldo anterior</label>
-                <input id="recAjusteSaldo" type="text" inputmode="decimal" value="0,00" />
-              </div>
-            </div>
-
-            <div class="row">
-              <div class="field">
-                <label>Condomínio do mês</label>
-                <input id="recCondominio" type="text" inputmode="decimal" />
-              </div>
-
-              <div class="field">
-                <label>Água do mês</label>
-                <input id="recAgua" type="text" inputmode="decimal" value="0,00" />
-              </div>
-            </div>
-
-            <div class="row">
-              <div class="field">
-                <label>Cobrança extra do proprietário</label>
-                <input id="recExtra" type="text" inputmode="decimal" value="0,00" />
-              </div>
-
-              <div class="field">
-                <label>Desconto por obra estrutural</label>
-                <input id="recDescontoObra" type="text" inputmode="decimal" value="0,00" />
-              </div>
-            </div>
-
-            <div class="row">
-              <div class="field">
-                <label>Valor pago nesta data</label>
+                <label>Valor pago nesta emissão</label>
                 <input id="recPagoAgora" type="text" inputmode="decimal" value="0,00" />
               </div>
+            </div>
+
+            <div class="row">
+              <div class="field">
+                <label>Total lançado nesta emissão</label>
+                <input id="recTotalLancado" type="text" readonly />
+              </div>
 
               <div class="field">
-                <label>Saldo restante da unidade</label>
+                <label>Saldo restante</label>
                 <input id="recSaldoRestante" type="text" readonly />
               </div>
             </div>
@@ -131,39 +130,18 @@
                 <label>Situação</label>
                 <input id="recSituacao" type="text" readonly />
               </div>
-
-              <div class="field">
-                <label>Total de encargos desta referência</label>
-                <input id="recTotalReferencia" type="text" readonly />
-              </div>
             </div>
 
-            <h3>Data de emissão</h3>
-            <div class="row">
-              <div class="field">
-                <label>Dia</label>
-                <select id="recDia"></select>
-              </div>
-
-              <div class="field">
-                <label>Mês</label>
-                <select id="recMesEmissao"></select>
-              </div>
-
-              <div class="field">
-                <label>Ano</label>
-                <input id="recAnoEmissao" type="number" min="2020" max="2100" />
-              </div>
-            </div>
+            <h3>Meses para gerar</h3>
+            <div id="monthChecklist" class="months-grid"></div>
 
             <div class="row">
-              <button class="btn" id="btnGerarRecibo">Gerar recibo e salvar</button>
+              <button class="btn" id="btnGerarRecibo">Gerar recibo(s) e salvar</button>
             </div>
 
             <div class="note">
               <b>Endereço:</b> <span id="enderecoLinha"></span><br/>
-              <b>CEP:</b> 20750-010<br/>
-              <b>Observação:</b> desconto por obra dá baixa, mas não entra no caixa.
+              <b>CEP:</b> 20750-010
             </div>
           </div>
 
@@ -174,106 +152,20 @@
         </div>
       </section>
 
-      <!-- RETROATIVO -->
-      <section class="panel hidden" id="tab-retroativo">
-        <div class="grid two">
-          <div class="card">
-            <h2>Recibo retroativo / segunda via</h2>
-            <p class="muted">Serve para comprovar meses antigos. Não entra no caixa mensal.</p>
-
-            <div class="row">
-              <div class="field">
-                <label>Nº do recibo</label>
-                <input id="retroNumero" type="text" readonly />
-              </div>
-
-              <div class="field">
-                <label>Apartamento</label>
-                <select id="retroApto"></select>
-              </div>
-            </div>
-
-            <div class="row">
-              <div class="field">
-                <label>Recebido de</label>
-                <input id="retroNome" type="text" placeholder="Nome do morador/proprietário" />
-              </div>
-            </div>
-
-            <div class="row">
-              <div class="field">
-                <label>Mês inicial</label>
-                <select id="retroMesInicio"></select>
-              </div>
-
-              <div class="field">
-                <label>Ano inicial</label>
-                <input id="retroAnoInicio" type="number" min="2020" max="2100" />
-              </div>
-            </div>
-
-            <div class="row">
-              <div class="field">
-                <label>Mês final</label>
-                <select id="retroMesFim"></select>
-              </div>
-
-              <div class="field">
-                <label>Ano final</label>
-                <input id="retroAnoFim" type="number" min="2020" max="2100" />
-              </div>
-            </div>
-
-            <div class="row">
-              <label class="check">
-                <input type="checkbox" id="retroIncluiCondo" checked />
-                <span>Incluir condomínio</span>
-              </label>
-
-              <label class="check">
-                <input type="checkbox" id="retroIncluiAgua" />
-                <span>Incluir água</span>
-              </label>
-            </div>
-
-            <div class="row">
-              <div class="field">
-                <label>Valor da água total (opcional)</label>
-                <input id="retroAguaTotal" type="text" inputmode="decimal" value="0,00" />
-              </div>
-
-              <div class="field">
-                <label>Total retroativo</label>
-                <input id="retroTotal" type="text" readonly />
-              </div>
-            </div>
-
-            <div class="row">
-              <button class="btn" id="btnGerarRetroativo">Gerar retroativo e salvar</button>
-            </div>
-          </div>
-
-          <div class="card">
-            <h2>Prévia retroativa</h2>
-            <div class="preview" id="retroPreview"></div>
-          </div>
-        </div>
-      </section>
-
       <!-- APARTAMENTOS -->
       <section class="panel hidden" id="tab-apartamentos">
         <div class="card">
           <h2>Apartamentos</h2>
-          <p class="muted">Marque isento para o síndico. Isento não gera condomínio, apenas água.</p>
+          <p class="muted">Aqui você ajusta saldo, nome e isenção de condomínio.</p>
 
           <div class="tablewrap">
             <table>
               <thead>
                 <tr>
                   <th>Apartamento</th>
-                  <th>Isento de condomínio</th>
-                  <th>Morador salvo</th>
-                  <th>Saldo atual</th>
+                  <th>Nome</th>
+                  <th>Saldo devedor</th>
+                  <th>Isento</th>
                   <th>Ações</th>
                 </tr>
               </thead>
@@ -287,17 +179,19 @@
       <section class="panel hidden" id="tab-despesas">
         <div class="grid two">
           <div class="card">
-            <h2>Despesas do condomínio</h2>
+            <h2>Despesas</h2>
 
             <div class="row">
               <div class="field">
                 <label>Dia</label>
                 <select id="despDia"></select>
               </div>
+
               <div class="field">
                 <label>Mês</label>
                 <select id="despMes"></select>
               </div>
+
               <div class="field">
                 <label>Ano</label>
                 <input id="despAno" type="number" min="2020" max="2100" />
@@ -316,15 +210,15 @@
               </div>
 
               <div class="field">
-                <label>Valor (R$)</label>
-                <input id="despValor" type="text" inputmode="decimal" placeholder="Ex: 300,00" />
+                <label>Valor</label>
+                <input id="despValor" type="text" inputmode="decimal" />
               </div>
             </div>
 
             <div class="row">
               <div class="field">
                 <label>Descrição</label>
-                <input id="despDesc" type="text" placeholder="Ex: compra de produtos, conserto, zelador..." />
+                <input id="despDesc" type="text" />
               </div>
             </div>
 
@@ -359,7 +253,7 @@
           <div class="row between">
             <div>
               <h2>Histórico</h2>
-              <p class="muted">Baixe recibos antigos, retroativos e prestação de contas.</p>
+              <p class="muted">Baixe recibos antigos e prestação de contas.</p>
             </div>
 
             <div class="inline">
@@ -389,7 +283,6 @@
               <thead>
                 <tr>
                   <th>Nº</th>
-                  <th>Tipo</th>
                   <th>Ref.</th>
                   <th>Apto</th>
                   <th>Nome</th>
