@@ -3,8 +3,9 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Condomínio Rua Glaziou, 30 — Sistema Online</title>
+  <title>Condomínio Rua Glaziou, 30</title>
   <link rel="stylesheet" href="style.css" />
+  <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
 </head>
 <body>
   <header class="topbar">
@@ -12,7 +13,7 @@
       <img src="logo.png" alt="Logo Glaziou 30" class="brandlogo" />
       <div>
         <h1>Condomínio — Rua Glaziou, 30</h1>
-        <p class="muted">Sistema online com recibos, retroativos, saldo, despesas e histórico sincronizado.</p>
+        <p class="muted">Recibos • Retroativos • Apartamentos • Despesas • Histórico</p>
       </div>
     </div>
   </header>
@@ -31,13 +32,13 @@
         <div><b>CEP:</b> 20750-010</div>
         <div><b>Cidade:</b> Rio de Janeiro</div>
         <div><b>Emitente:</b> Gabriel Brito Cirilo</div>
-        <div><b>Taxa padrão:</b> R$ 160,00</div>
+        <div><b>Condomínio padrão:</b> R$ 160,00</div>
         <div><b>Isento padrão:</b> 101 Fundos</div>
       </div>
     </aside>
 
     <section class="content">
-      <!-- RECIBO NORMAL -->
+      <!-- RECIBO -->
       <section class="panel" id="tab-recibo">
         <div class="grid two">
           <div class="card">
@@ -47,7 +48,7 @@
               <div class="field">
                 <label>Nº do recibo</label>
                 <div class="inline">
-                  <input id="recNumero" type="text" placeholder="Automático" readonly />
+                  <input id="recNumero" type="text" readonly />
                   <button class="btn small" id="btnProximo">Próximo</button>
                 </div>
               </div>
@@ -85,7 +86,7 @@
 
               <div class="field">
                 <label>Ajuste manual do saldo anterior</label>
-                <input id="recAjusteSaldo" type="text" inputmode="decimal" placeholder="Ex: 0,00" value="0,00" />
+                <input id="recAjusteSaldo" type="text" inputmode="decimal" value="0,00" />
               </div>
             </div>
 
@@ -97,26 +98,26 @@
 
               <div class="field">
                 <label>Água do mês</label>
-                <input id="recAgua" type="text" inputmode="decimal" placeholder="Ex: 80,00" value="0,00" />
+                <input id="recAgua" type="text" inputmode="decimal" value="0,00" />
               </div>
             </div>
 
             <div class="row">
               <div class="field">
                 <label>Cobrança extra do proprietário</label>
-                <input id="recExtra" type="text" inputmode="decimal" placeholder="Ex: manutenção paga pelo condomínio" value="0,00" />
+                <input id="recExtra" type="text" inputmode="decimal" value="0,00" />
               </div>
 
               <div class="field">
                 <label>Desconto por obra estrutural</label>
-                <input id="recDescontoObra" type="text" inputmode="decimal" placeholder="Ex: 60,00" value="0,00" />
+                <input id="recDescontoObra" type="text" inputmode="decimal" value="0,00" />
               </div>
             </div>
 
             <div class="row">
               <div class="field">
                 <label>Valor pago nesta data</label>
-                <input id="recPagoAgora" type="text" inputmode="decimal" placeholder="Ex: 100,00" value="0,00" />
+                <input id="recPagoAgora" type="text" inputmode="decimal" value="0,00" />
               </div>
 
               <div class="field">
@@ -183,7 +184,7 @@
             <div class="row">
               <div class="field">
                 <label>Nº do recibo</label>
-                <input id="retroNumero" type="text" placeholder="Automático" readonly />
+                <input id="retroNumero" type="text" readonly />
               </div>
 
               <div class="field">
@@ -204,6 +205,7 @@
                 <label>Mês inicial</label>
                 <select id="retroMesInicio"></select>
               </div>
+
               <div class="field">
                 <label>Ano inicial</label>
                 <input id="retroAnoInicio" type="number" min="2020" max="2100" />
@@ -215,6 +217,7 @@
                 <label>Mês final</label>
                 <select id="retroMesFim"></select>
               </div>
+
               <div class="field">
                 <label>Ano final</label>
                 <input id="retroAnoFim" type="number" min="2020" max="2100" />
@@ -355,7 +358,7 @@
         <div class="card">
           <div class="row between">
             <div>
-              <h2>Histórico online</h2>
+              <h2>Histórico</h2>
               <p class="muted">Baixe recibos antigos, retroativos e prestação de contas.</p>
             </div>
 
@@ -408,6 +411,6 @@
     <span>Rua Glaziou, 30 / Pilares - RJ • CEP 20750-010 • Rio de Janeiro • Emitente: Gabriel Brito Cirilo</span>
   </footer>
 
-  <script type="module" src="app.js"></script>
+  <script src="app.js"></script>
 </body>
 </html>
