@@ -26,11 +26,11 @@ const FIXOS = {
 };
 
 const STORAGE = {
-  apartments: "cond_apartments_v2",
-  receipts: "cond_receipts_v2",
-  expenses: "cond_expenses_v2",
-  seq: "cond_receipt_seq_v2",
-  logo: "cond_logo_cache_v2"
+  apartments: "cond_apartments_v3",
+  receipts: "cond_receipts_v3",
+  expenses: "cond_expenses_v3",
+  seq: "cond_receipt_seq_v3",
+  logo: "cond_logo_cache_v3"
 };
 
 const state = {
@@ -74,9 +74,6 @@ function uid(){
 function today(){
   const d = new Date();
   return { dia:d.getDate(), mes:d.getMonth(), ano:d.getFullYear() };
-}
-function ymValue(year, month){
-  return year * 12 + month;
 }
 function monthYearLabel(month, year){
   return `${MESES[month]}/${year}`;
@@ -221,7 +218,7 @@ function buildMonthChecklist(){
 }
 
 function selectedMonths(){
-  return qsa(".month-check:checked").map(el => Number(el.value));
+  return qsa(".month-check:checked").map(el => Number(el.value)).sort((a,b)=> a-b);
 }
 
 function initTabs(){
@@ -258,10 +255,8 @@ function loadDefaults(){
   qs("#histAno").value = t.ano;
   qs("#histMes").value = "-1";
 
-  if (qsa(".month-check").length) {
-    const current = qsa(".month-check")[t.mes];
-    if (current) current.checked = true;
-  }
+  const checks = qsa(".month-check");
+  if (checks[t.mes]) checks[t.mes].checked = true;
 
   handleApartmentChange();
   refreshReceiptPreview();
@@ -287,6 +282,11 @@ function computeReceiptData(){
   const remainingBalance = previousBalance + launchedNow - paidNow;
   const status = statusFromBalance(remainingBalance);
 
+  let referente = "—";
+  if (includeCondo && includeWater) referente = "Condomínio e Água";
+  else if (includeCondo) referente = "Condomínio";
+  else if (includeWater) referente = "Água";
+
   return {
     numberPreview: qs("#recNumero").value,
     apt,
@@ -296,6 +296,7 @@ function computeReceiptData(){
     months,
     includeCondo,
     includeWater,
+    referente,
     condoPerMonth,
     waterPerMonth,
     previousBalance,
@@ -316,31 +317,42 @@ function refreshReceiptPreview(){
   qs("#recSaldoRestante").value = numberToMoney(data.remainingBalance);
   qs("#recSituacao").value = data.status;
 
-  const monthList = data.months.length
-    ? data.months.map(m => `• ${MESES[m]}/${data.year}`).join("\n")
-    : "• Nenhum mês selecionado";
+  const mesesTexto = data.months.length
+    ? data.months.map(m => monthYearLabel(m, data.year)).join(", ")
+    : "Nenhum mês selecionado";
 
-  qs("#recPreview").textContent =
-`RECIBO Nº ${data.numberPreview}
+  let linhas = [];
+  linhas.push(`Recebido de: ${data.name || "__________________________"}`);
+  linhas.push(`Endereço: ${enderecoCompleto(data.apt.name)}`);
+  linhas.push(`CEP: ${FIXOS.cep}`);
+  linhas.push(``);
+  linhas.push(`Referente a: ${data.referente}`);
+  linhas.push(`Mês/Referência: ${mesesTexto}`);
+  linhas.push(``);
+  linhas.push(`Valores recebidos:`);
 
-Recebido de: ${data.name || "__________________________"}
-Endereço: ${enderecoCompleto(data.apt.name)}
-CEP: ${FIXOS.cep}
+  if (data.includeCondo) {
+    linhas.push(`Condomínio: ${numberToMoney(data.condoPerMonth * data.months.length)}`);
+  }
+  if (data.includeWater) {
+    linhas.push(`Água: ${numberToMoney(data.waterPerMonth * data.months.length)}`);
+  }
 
-Meses selecionados:
-${monthList}
+  linhas.push(``);
+  linhas.push(`TOTAL: ${numberToMoney(data.paidNow)}`);
 
-Saldo anterior: ${numberToMoney(data.previousBalance)}
-Condomínio por mês: ${numberToMoney(data.condoPerMonth)}
-Água por mês: ${numberToMoney(data.waterPerMonth)}
+  if (data.previousBalance > 0) {
+    linhas.push(``);
+    linhas.push(`Saldo anterior da unidade: ${numberToMoney(data.previousBalance)}`);
+    linhas.push(`Saldo restante da unidade: ${numberToMoney(data.remainingBalance)}`);
+  }
 
-Total lançado nesta emissão: ${numberToMoney(data.launchedNow)}
-Valor pago nesta emissão: ${numberToMoney(data.paidNow)}
+  linhas.push(``);
+  linhas.push(`${FIXOS.cidade}, dia ${data.day} de ${MESES[today().mes]} de ${today().ano}`);
+  linhas.push(``);
+  linhas.push(`Emitente: ${FIXOS.emitente}`);
 
-Saldo restante da unidade: ${numberToMoney(data.remainingBalance)}
-Situação: ${data.status}
-
-Emitente: ${FIXOS.emitente}`;
+  qs("#recPreview").textContent = linhas.join("\n");
 }
 
 function handleApartmentChange(){
@@ -363,6 +375,10 @@ function saveReceipt(){
     alert("Selecione pelo menos 1 mês.");
     return;
   }
+  if (!data.includeCondo && !data.includeWater) {
+    alert("Marque Condomínio, Água ou os dois.");
+    return;
+  }
 
   const receiptNumber = consumeNextReceiptNumber();
 
@@ -373,6 +389,7 @@ function saveReceipt(){
     residentName: data.name,
     year: data.year,
     months: data.months,
+    referente: data.referente,
     condoPerMonth: data.condoPerMonth,
     waterPerMonth: data.waterPerMonth,
     previousBalance: data.previousBalance,
@@ -381,6 +398,8 @@ function saveReceipt(){
     remainingBalance: data.remainingBalance,
     status: data.status,
     issueDay: data.day,
+    issueMonth: today().mes,
+    issueYear: today().ano,
     createdAt: Date.now()
   };
 
@@ -397,8 +416,6 @@ function saveReceipt(){
   }
 
   qs("#recNumero").value = nextReceiptPreview();
-  fillApartmentSelect(qs("#recApto"));
-  qs("#recApto").value = data.apt.id;
   renderApartments();
   renderHistory();
   refreshReceiptPreview();
@@ -568,7 +585,7 @@ function renderHistory(){
         <td>${r.residentName}</td>
         <td>${numberToMoney(r.paidNow || 0)}</td>
         <td>${numberToMoney(r.remainingBalance || 0)}</td>
-        <td>${String(r.issueDay).padStart(2,"0")}/${String((r.months && r.months[0] !== undefined ? r.months[0] + 1 : 1)).padStart(2,"0")}/${r.year}</td>
+        <td>${String(r.issueDay).padStart(2,"0")}/${String(r.issueMonth + 1).padStart(2,"0")}/${r.issueYear}</td>
         <td class="actions">
           <button class="linkbtn" data-download="${r.id}">Baixar PDF</button>
         </td>
@@ -652,29 +669,35 @@ async function generateReceiptPDF(item){
   docPdf.text(`Endereço: ${enderecoCompleto(item.apartmentName)}`, 14, y); y += 8;
   docPdf.text(`CEP: ${FIXOS.cep}`, 14, y); y += 10;
 
-  docPdf.setFont("helvetica", "bold");
-  docPdf.text("Meses incluídos:", 14, y); y += 8;
-  docPdf.setFont("helvetica", "normal");
-
-  (item.months || []).forEach(m=>{
-    docPdf.text(`• ${monthYearLabel(m, item.year)}`, 18, y);
-    y += 7;
-  });
-
-  y += 3;
-  docPdf.text(`Saldo anterior: ${numberToMoney(item.previousBalance || 0)}`, 14, y); y += 8;
-  docPdf.text(`Condomínio por mês: ${numberToMoney(item.condoPerMonth || 0)}`, 14, y); y += 8;
-  docPdf.text(`Água por mês: ${numberToMoney(item.waterPerMonth || 0)}`, 14, y); y += 8;
-  docPdf.text(`Total lançado nesta emissão: ${numberToMoney(item.launchedNow || 0)}`, 14, y); y += 8;
-  docPdf.text(`Valor pago nesta emissão: ${numberToMoney(item.paidNow || 0)}`, 14, y); y += 8;
+  docPdf.text(`Referente a: ${item.referente}`, 14, y); y += 8;
+  docPdf.text(`Mês/Referência: ${(item.months || []).map(m => monthYearLabel(m, item.year)).join(", ")}`, 14, y); y += 10;
 
   docPdf.setFont("helvetica", "bold");
-  docPdf.text(`Saldo restante da unidade: ${numberToMoney(item.remainingBalance || 0)}`, 14, y); y += 8;
-  docPdf.text(`Situação: ${item.status || ""}`, 14, y); y += 10;
+  docPdf.text("Valores recebidos:", 14, y); y += 8;
+  docPdf.setFont("helvetica", "normal");
+
+  const totalCondo = (item.condoPerMonth || 0) * ((item.months || []).length);
+  const totalAgua = (item.waterPerMonth || 0) * ((item.months || []).length);
+
+  if (totalCondo > 0) {
+    docPdf.text(`Condomínio: ${numberToMoney(totalCondo)}`, 14, y); y += 8;
+  }
+  if (totalAgua > 0) {
+    docPdf.text(`Água: ${numberToMoney(totalAgua)}`, 14, y); y += 8;
+  }
+
+  y += 2;
+  docPdf.setFont("helvetica", "bold");
+  docPdf.text(`TOTAL: ${numberToMoney(item.paidNow || 0)}`, 14, y); y += 10;
+
+  if ((item.previousBalance || 0) > 0) {
+    docPdf.setFont("helvetica", "normal");
+    docPdf.text(`Saldo anterior da unidade: ${numberToMoney(item.previousBalance || 0)}`, 14, y); y += 8;
+    docPdf.text(`Saldo restante da unidade: ${numberToMoney(item.remainingBalance || 0)}`, 14, y); y += 10;
+  }
 
   docPdf.setFont("helvetica", "normal");
-  const monthDate = (item.months && item.months.length) ? item.months[0] : 0;
-  docPdf.text(`${FIXOS.cidade}, dia ${item.issueDay} de ${MESES[monthDate]} de ${item.year}`, 14, y); y += 10;
+  docPdf.text(`${FIXOS.cidade}, dia ${item.issueDay} de ${MESES[item.issueMonth]} de ${item.issueYear}`, 14, y); y += 10;
   docPdf.text(`Emitente: ${FIXOS.emitente}`, 14, y);
 
   docPdf.save(`Recibo_${item.number}_${item.apartmentName}.pdf`);
