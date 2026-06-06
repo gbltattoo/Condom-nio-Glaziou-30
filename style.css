@@ -298,3 +298,12 @@ tbody td{
   color:var(--muted);
   font-size:12px;
 }
+
+.positive{ color:#45d483 !important; font-weight:800; }
+.negative{ color:#ff6b6b !important; font-weight:800; }
+.warning{ color:#ffd166 !important; font-weight:800; }
+.big{ font-size:15px; line-height:1.8; }
+.badge{ display:inline-block; padding:3px 8px; border-radius:999px; border:1px solid var(--line); background:rgba(255,255,255,.04); }
+.tablewrap input[type="text"], .tablewrap input[type="number"]{ min-width:130px; }
+textarea{ width:100%; min-height:80px; padding:10px; border-radius:10px; border:1px solid var(--line); background:#0e1217; color:var(--text); outline:none; }
+.danger{ border-color:rgba(255,107,107,.5); color:#ffb4b4; }
