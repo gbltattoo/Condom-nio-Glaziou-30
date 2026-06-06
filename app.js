@@ -1,192 +1,77 @@
-// Sistema Condomínio Rua Glaziou, 30 — versão funcional segura
-(function(){
-'use strict';
-
-const MESES = ["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];
-const APTOS_FIXOS = ["101","101 Fundos","201","201 Sala","201 Fundos","301","301 Sala","301 Fundos"];
-const FIXOS = { taxa:160, emitente:"Gabriel Brito Cirilo", rua:"Rua Glaziou, 30", bairro:"Pilares - RJ", cep:"20750-010", cidade:"Rio de Janeiro", isento:"101 Fundos", logo:"logo.png" };
-const K = { aptos:"glaziou_aptos_v10", recibos:"glaziou_recibos_v10", despesas:"glaziou_despesas_v10", caixa:"glaziou_caixa_v10", seq:"glaziou_seq_v10", logo:"glaziou_logo_v10" };
-
-let state = { aptos:[], recibos:[], despesas:[], caixa:{saldoInicial:0,saldoReal:0}, logoData:"" };
-
-function $(id){ return document.getElementById(id); }
-function all(sel){ return Array.from(document.querySelectorAll(sel)); }
-function money(n){ return (Number(n)||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'}); }
-function inputMoney(n){ return (Number(n)||0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2}); }
-function parseMoney(v){ if(v==null) return 0; return Number(String(v).replace(/\./g,'').replace(',','.').replace(/[^0-9.-]/g,''))||0; }
-function save(k,v){ localStorage.setItem(k, JSON.stringify(v)); }
-function load(k,fb){ try{ const v=localStorage.getItem(k); return v?JSON.parse(v):fb; }catch(e){ return fb; } }
-function uid(){ return 'id_'+Date.now()+'_'+Math.random().toString(16).slice(2); }
-function today(){ const d=new Date(); return {dia:d.getDate(), mes:d.getMonth(), ano:d.getFullYear()}; }
-function pad(n){ return String(n).padStart(6,'0'); }
-function monthYear(m,y){ return `${MESES[Number(m)]}/${y}`; }
-function endereco(ap){ return `${FIXOS.rua} — Apto ${ap} / ${FIXOS.bairro}`; }
-function apto(id){ return state.aptos.find(a=>a.id===id || a.name===id); }
-function selectedMonths(){ return all('.month-check:checked').map(x=>Number(x.value)).sort((a,b)=>a-b); }
-function nextNum(){ return pad((Number(localStorage.getItem(K.seq)||0)+1)); }
-function consumeNum(){ const n=Number(localStorage.getItem(K.seq)||0)+1; localStorage.setItem(K.seq,String(n)); return pad(n); }
-function syncSeq(){ let max=Number(localStorage.getItem(K.seq)||0); state.recibos.forEach(r=>{ const n=Number(String(r.number||'').replace(/\D/g,''))||0; if(n>max) max=n; }); localStorage.setItem(K.seq,String(max)); }
-function setText(id, txt){ const el=$(id); if(el) el.textContent=txt; }
-function setValue(id, val){ const el=$(id); if(el) el.value=val; }
-function val(id){ const el=$(id); return el?el.value:''; }
-function checked(id){ const el=$(id); return !!(el&&el.checked); }
-
-function migrateOld(){
-  const oldA = load('cond_apartments_v3', null);
-  const oldR = load('cond_receipts_v3', null);
-  const oldD = load('cond_expenses_v3', null);
-  if(!localStorage.getItem(K.aptos) && Array.isArray(oldA)){
-    const arr = oldA.map(a=>({ id:a.id||a.name, name:a.name||a.id, residentName:a.residentName||'', balance:Number(a.balance||0), justification:a.justification||'', exemptCondo:(a.name||a.id)===FIXOS.isento || !!a.exemptCondo }));
-    save(K.aptos, arr);
-  }
-  if(!localStorage.getItem(K.recibos) && Array.isArray(oldR)) save(K.recibos, oldR);
-  if(!localStorage.getItem(K.despesas) && Array.isArray(oldD)) save(K.despesas, oldD);
-}
-
+const MESES=["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];
+const APTOS=["101","101 Fundos","201","201 Sala","201 Fundos","301","301 Sala","301 Fundos"];
+const NOMES_PADRAO={
+  "101":"Jaqueline C Ribeiro",
+  "101 Fundos":"Catia Maria",
+  "201":"Edmea de Melo",
+  "201 Sala":"Danilo Reis E Silva",
+  "201 Fundos":"",
+  "301":"Marcia Valeria",
+  "301 Sala":"Fernanda Telles",
+  "301 Fundos":"Vagna Miranda"
+};
+const FIXOS={taxa:160,emitente:"Gabriel Brito Cirilo",rua:"Rua Glaziou, 30",bairro:"Pilares - RJ",cep:"20750-010",cidade:"Rio de Janeiro",isento:"101 Fundos",logo:"logo.png"};
+const STORAGE={apartments:"glz_apartamentos_caixa_v4",receipts:"glz_receitas_caixa_v4",expenses:"glz_despesas_caixa_v4",seq:"glz_seq_caixa_v4",balances:"glz_saldos_caixa_v4",logo:"glz_logo_cache_v4"};
+const state={apartments:[],receipts:[],expenses:[],balances:{},logoData:""};
+function qs(s){return document.querySelector(s)}function qsa(s){return Array.from(document.querySelectorAll(s))}
+function load(k,f){try{const r=localStorage.getItem(k);return r?JSON.parse(r):f}catch(e){return f}}function save(k,v){localStorage.setItem(k,JSON.stringify(v))}
+function moneyToNumber(v){if(v===undefined||v===null)return 0;let s=String(v).trim();if(!s)return 0;s=s.replace(/R\$/g,"").replace(/\s/g,"");if(s.includes(",")){s=s.replace(/\./g,"").replace(",",".")}return Number(s.replace(/[^\d.-]/g,""))||0}
+function money(n){return (Number(n)||0).toLocaleString("pt-BR",{style:"currency",currency:"BRL"})}
+function inputMoney(n){return (Number(n)||0).toLocaleString("pt-BR",{minimumFractionDigits:2,maximumFractionDigits:2})}
+function uid(){return "id_"+Date.now()+"_"+Math.random().toString(16).slice(2)}function pad(n){return String(n).padStart(6,"0")}function now(){const d=new Date();return{day:d.getDate(),month:d.getMonth(),year:d.getFullYear()}}
+function dateLabel(d,m,y){return String(d).padStart(2,"0")+"/"+String(m+1).padStart(2,"0")+"/"+y}function monthYear(m,y){return MESES[m]+"/"+y}
 function initData(){
-  migrateOld();
-  state.aptos = load(K.aptos, []);
-  APTOS_FIXOS.forEach(nome=>{
-    if(!state.aptos.find(a=>a.name===nome || a.id===nome)) state.aptos.push({id:nome,name:nome,residentName:'',balance:0,justification:'',exemptCondo:nome===FIXOS.isento});
-  });
-  state.aptos.forEach(a=>{ if(a.name===FIXOS.isento || a.id===FIXOS.isento){ a.exemptCondo=true; a.balance=0; } if(a.justification==null) a.justification=''; });
-  save(K.aptos,state.aptos);
-  state.recibos = load(K.recibos, []);
-  state.despesas = load(K.despesas, []);
-  state.caixa = load(K.caixa, {saldoInicial:0,saldoReal:0});
-  syncSeq();
-}
-
-function fillSelects(){
-  const t=today();
-  const recApto=$('recApto'); if(recApto){ recApto.innerHTML=''; state.aptos.slice().sort((a,b)=>a.name.localeCompare(b.name)).forEach(a=>{ const o=document.createElement('option'); o.value=a.id; o.textContent=a.name; recApto.appendChild(o); }); }
-  ['despMes','histMes'].forEach(id=>{ const s=$(id); if(!s) return; s.innerHTML=''; if(id==='histMes'){ const o=document.createElement('option'); o.value='-1'; o.textContent='Todos'; s.appendChild(o); } MESES.forEach((m,i)=>{ const o=document.createElement('option'); o.value=i; o.textContent=m; s.appendChild(o); }); });
-  const dia=$('despDia'); if(dia){ dia.innerHTML=''; for(let i=1;i<=31;i++){ const o=document.createElement('option'); o.value=i; o.textContent=i; dia.appendChild(o); } }
-  const months=$('monthChecklist'); if(months){ months.innerHTML=''; MESES.forEach((m,i)=>{ const lab=document.createElement('label'); lab.className='month-item'; lab.innerHTML=`<input type="checkbox" class="month-check" value="${i}"> <span>${m}</span>`; months.appendChild(lab); }); const c=months.querySelectorAll('.month-check')[t.mes]; if(c) c.checked=true; }
-  setValue('recNumero', nextNum()); setValue('recAnoRef', t.ano); setValue('recDiaAtual', t.dia); setValue('recCondominio', inputMoney(FIXOS.taxa)); setValue('recPagoAgora','0,00');
-  setValue('despAno', t.ano); setValue('despMes', t.mes); setValue('despDia', t.dia); setValue('histAno', t.ano); setValue('histMes','-1');
-  setValue('saldoInicial', inputMoney(state.caixa.saldoInicial)); setValue('saldoReal', inputMoney(state.caixa.saldoReal));
-}
-
-function calcReceipt(){
-  const ap=apto(val('recApto')); if(!ap) return null;
-  const meses=selectedMonths(); const ano=Number(val('recAnoRef'))||today().ano; const dia=Number(val('recDiaAtual'))||today().dia;
-  const include=checked('ckCondo');
-  const condo = include && !ap.exemptCondo ? FIXOS.taxa : 0;
-  const lancado = meses.length * condo;
-  const pago = parseMoney(val('recPagoAgora'));
-  const anterior = Number(ap.balance||0);
-  let restante = anterior + lancado - pago;
-  if(ap.exemptCondo && include){ restante = Math.max(0, anterior - pago); }
-  const status = restante>0 ? (restante<FIXOS.taxa?'Parcial':'Em aberto') : (restante<0?'Crédito':'Quitado');
-  return { ap, meses, ano, dia, include, condo, lancado, pago, anterior, restante, status, nome:val('recNome').trim(), referente:'Condomínio' };
-}
-
-function updatePreview(){
-  const d=calcReceipt(); if(!d) return;
-  setText('enderecoLinha', endereco(d.ap.name)); setValue('recCondominio', inputMoney(d.ap.exemptCondo?0:FIXOS.taxa));
-  setValue('recSaldoAnterior', money(d.anterior)); setValue('recTotalLancado', money(d.lancado)); setValue('recSaldoRestante', money(d.restante)); setValue('recSituacao', d.status);
-  const meses = d.meses.length?d.meses.map(m=>monthYear(m,d.ano)).join(', '):'Nenhum mês selecionado';
-  const linhas=[];
-  linhas.push(`Recebido de: ${d.nome || '__________________________'}`);
-  linhas.push(`Endereço: ${endereco(d.ap.name)}`); linhas.push(`CEP: ${FIXOS.cep}`); linhas.push('');
-  linhas.push(`Referente a: Condomínio`); linhas.push(`Mês/Referência: ${meses}`); linhas.push(''); linhas.push('Valores recebidos:');
-  linhas.push(`Condomínio: ${money(d.lancado)}`); linhas.push(''); linhas.push(`TOTAL: ${money(d.pago)}`);
-  if(d.anterior>0 || d.restante>0){ linhas.push(''); linhas.push(`Saldo anterior: ${money(d.anterior)}`); linhas.push(`Valor pago: ${money(d.pago)}`); linhas.push(`Saldo restante: ${money(Math.max(0,d.restante))}`); }
-  linhas.push(''); linhas.push(`${FIXOS.cidade}, dia ${d.dia} de ${MESES[today().mes]} de ${today().ano}`); linhas.push(''); linhas.push(`Emitente: ${FIXOS.emitente}`);
-  setText('recPreview', linhas.join('\n'));
-}
-
-function saveReceipt(){
-  const d=calcReceipt(); if(!d) return alert('Erro ao calcular recibo.');
-  if(!d.nome) return alert('Digite o nome do morador/proprietário.');
-  if(!d.meses.length) return alert('Selecione pelo menos um mês.');
-  const editId=val('editingReceiptId');
-  if(editId){
-    const r=state.recibos.find(x=>x.id===editId); if(r) Object.assign(r,{apartmentName:d.ap.name,residentName:d.nome,year:d.ano,months:d.meses,referente:d.referente,condoPerMonth:d.condo,previousBalance:d.anterior,launchedNow:d.lancado,paidNow:d.pago,remainingBalance:d.restante,status:d.status,issueDay:d.dia,issueMonth:today().mes,issueYear:today().ano,updatedAt:Date.now()});
-    setValue('editingReceiptId','');
+  let aps=load(STORAGE.apartments,[]);
+  if(!aps.length){
+    aps=APTOS.map(a=>({id:a,name:a,residentName:NOMES_PADRAO[a]||"",exempt:a===FIXOS.isento,role:a===FIXOS.isento?"Síndica / isento":""}));
   }else{
-    const r={id:uid(),number:consumeNum(),apartmentName:d.ap.name,residentName:d.nome,year:d.ano,months:d.meses,referente:d.referente,condoPerMonth:d.condo,waterPerMonth:0,previousBalance:d.anterior,launchedNow:d.lancado,paidNow:d.pago,remainingBalance:d.restante,status:d.status,issueDay:d.dia,issueMonth:today().mes,issueYear:today().ano,createdAt:Date.now()};
-    state.recibos.push(r);
-    generateReceiptPDF(r);
+    APTOS.forEach(a=>{
+      if(!aps.find(x=>x.id===a)) aps.push({id:a,name:a,residentName:NOMES_PADRAO[a]||"",exempt:a===FIXOS.isento,role:a===FIXOS.isento?"Síndica / isento":""});
+    });
+    aps.forEach(a=>{
+      if(a.name===FIXOS.isento||a.id===FIXOS.isento){ a.exempt=true; a.role="Síndica / isento"; }
+      if((!a.residentName || !String(a.residentName).trim()) && NOMES_PADRAO[a.id]) a.residentName=NOMES_PADRAO[a.id];
+    });
   }
-  const ap=apto(d.ap.id); if(ap){ ap.residentName=d.nome; ap.balance=d.ap.exemptCondo?0:Math.max(0,d.restante); }
-  save(K.aptos,state.aptos); save(K.recibos,state.recibos);
-  setValue('recNumero', nextNum()); renderAll(); updatePreview();
+  state.apartments=aps;
+  save(STORAGE.apartments,aps);
+  state.receipts=load(STORAGE.receipts,[]);
+  state.expenses=load(STORAGE.expenses,[]);
+  state.balances=load(STORAGE.balances,{})
 }
-
-function renderAptos(){
-  const tb=$('tbodyApartamentos'); if(!tb) return; tb.innerHTML='';
-  state.aptos.slice().sort((a,b)=>a.name.localeCompare(b.name)).forEach(a=>{
-    const tr=document.createElement('tr');
-    const lock=a.name===FIXOS.isento;
-    tr.innerHTML=`<td>${a.name}</td><td><input data-apnome="${a.id}" value="${a.residentName||''}"></td><td><input data-apsaldo="${a.id}" value="${inputMoney(lock?0:a.balance||0)}" ${lock?'readonly':''}></td><td><input data-apjust="${a.id}" value="${a.justification||''}" placeholder="Justificativa"></td><td><input type="checkbox" data-apisento="${a.id}" ${a.exemptCondo?'checked':''} ${lock?'disabled':''}></td><td class="actions"><button class="linkbtn" data-apsave="${a.id}">Salvar</button></td>`;
-    tb.appendChild(tr);
-  });
-  tb.querySelectorAll('[data-apsave]').forEach(b=>b.onclick=()=>{ const id=b.dataset.apsave; const a=apto(id); if(!a) return; a.residentName=tb.querySelector(`[data-apnome="${CSS.escape(id)}"]`).value.trim(); a.justification=tb.querySelector(`[data-apjust="${CSS.escape(id)}"]`).value.trim(); if(a.name!==FIXOS.isento){ a.balance=parseMoney(tb.querySelector(`[data-apsaldo="${CSS.escape(id)}"]`).value); a.exemptCondo=tb.querySelector(`[data-apisento="${CSS.escape(id)}"]`).checked; } else { a.balance=0; a.exemptCondo=true; } save(K.aptos,state.aptos); renderAll(); updatePreview(); });
-}
-
-function addExpense(){
-  const edit=val('editingExpenseId'); const value=parseMoney(val('despValor')); if(!value) return alert('Digite o valor da despesa.');
-  const obj={day:Number(val('despDia'))||today().dia,month:Number(val('despMes'))||today().mes,year:Number(val('despAno'))||today().ano,category:val('despCat')||'Outros',description:val('despDesc').trim(),value,updatedAt:Date.now()};
-  if(edit){ const e=state.despesas.find(x=>x.id===edit); if(e) Object.assign(e,obj); setValue('editingExpenseId',''); }
-  else state.despesas.push(Object.assign({id:uid(),createdAt:Date.now()},obj));
-  save(K.despesas,state.despesas); setValue('despValor',''); setValue('despDesc',''); renderAll();
-}
-
-function renderDespesas(){
-  const tb=$('tbodyDespesas'); if(!tb) return; tb.innerHTML='';
-  state.despesas.slice().sort((a,b)=>(b.createdAt||0)-(a.createdAt||0)).forEach(e=>{
-    const tr=document.createElement('tr');
-    tr.innerHTML=`<td>${String(e.day).padStart(2,'0')}/${String(Number(e.month)+1).padStart(2,'0')}/${e.year}</td><td>${e.category}</td><td>${e.description||''}</td><td>${money(e.value)}</td><td class="actions"><button class="linkbtn" data-expdf="${e.id}">PDF</button><button class="linkbtn" data-expedit="${e.id}">Editar</button><button class="linkbtn" data-expdel="${e.id}">Excluir</button></td>`;
-    tb.appendChild(tr);
-  });
-  tb.querySelectorAll('[data-expdel]').forEach(b=>b.onclick=()=>{ if(confirm('Excluir esta despesa?')){ state.despesas=state.despesas.filter(e=>e.id!==b.dataset.expdel); save(K.despesas,state.despesas); renderAll(); }});
-  tb.querySelectorAll('[data-expedit]').forEach(b=>b.onclick=()=>{ const e=state.despesas.find(x=>x.id===b.dataset.expedit); if(!e) return; setValue('editingExpenseId',e.id); setValue('despDia',e.day); setValue('despMes',e.month); setValue('despAno',e.year); setValue('despCat',e.category); setValue('despValor',inputMoney(e.value)); setValue('despDesc',e.description||''); showTab('despesas'); });
-  tb.querySelectorAll('[data-expdf]').forEach(b=>b.onclick=()=>{ const e=state.despesas.find(x=>x.id===b.dataset.expdf); if(e) generateExpensePDF(e); });
-}
-
-function filter(){ const y=Number(val('histAno'))||null; const m=Number(val('histMes')); return {y, m:m>=0?m:null}; }
-function filtRec(){ const f=filter(); return state.recibos.filter(r=>(!f.y||Number(r.year)===f.y)&&(f.m===null||(r.months||[]).map(Number).includes(f.m))); }
-function filtDesp(){ const f=filter(); return state.despesas.filter(e=>(!f.y||Number(e.year)===f.y)&&(f.m===null||Number(e.month)===f.m)); }
-function totals(){ const rec=filtRec(), des=filtDesp(); const recebido=rec.reduce((s,r)=>s+Number(r.paidNow||0),0); const lancado=rec.reduce((s,r)=>s+Number(r.launchedNow||0),0); const despesas=des.reduce((s,e)=>s+Number(e.value||0),0); const esperado=Number(state.caixa.saldoInicial||0)+recebido-despesas; const real=Number(state.caixa.saldoReal||0); return {rec,des,recebido,lancado,despesas,esperado,real,dif:real-esperado}; }
-function renderHistorico(){
-  const t=totals(); const cls=t.dif>=0?'🟢 POSITIVO':'🔴 NEGATIVO';
-  const html=`<div><b>Total recebido:</b> ${money(t.recebido)}</div><div><b>Total despesas:</b> ${money(t.despesas)}</div><div><b>Saldo esperado:</b> ${money(t.esperado)}</div><div><b>Saldo real:</b> ${money(t.real)}</div><div><b>Diferença:</b> ${money(t.dif)} — ${cls}</div>`;
-  const hist=$('histTotais'); if(hist) hist.innerHTML=html; const prest=$('prestacaoResumo'); if(prest) prest.innerHTML=html;
-  const tb=$('tbodyHistorico'); if(!tb) return; tb.innerHTML='';
-  t.rec.slice().sort((a,b)=>(b.createdAt||0)-(a.createdAt||0)).forEach(r=>{ const ref=(r.months||[]).map(m=>monthYear(m,r.year)).join(', '); const tr=document.createElement('tr'); tr.innerHTML=`<td>${r.number}</td><td>${ref}</td><td>${r.apartmentName}</td><td>${r.residentName}</td><td>${money(r.paidNow)}</td><td>${money(r.remainingBalance)}</td><td>${String(r.issueDay).padStart(2,'0')}/${String(Number(r.issueMonth)+1).padStart(2,'0')}/${r.issueYear}</td><td class="actions"><button class="linkbtn" data-pdf="${r.id}">PDF</button><button class="linkbtn" data-edit="${r.id}">Editar</button><button class="linkbtn" data-refazer="${r.id}">Refazer</button><button class="linkbtn" data-del="${r.id}">Excluir</button></td>`; tb.appendChild(tr); });
-  tb.querySelectorAll('[data-pdf]').forEach(b=>b.onclick=()=>{ const r=state.recibos.find(x=>x.id===b.dataset.pdf); if(r) generateReceiptPDF(r); });
-  tb.querySelectorAll('[data-edit],[data-refazer]').forEach(b=>b.onclick=()=>{ const id=b.dataset.edit||b.dataset.refazer; const r=state.recibos.find(x=>x.id===id); if(!r) return; setValue('editingReceiptId',b.dataset.edit?id:''); setValue('recApto', state.aptos.find(a=>a.name===r.apartmentName)?.id || r.apartmentName); setValue('recNome',r.residentName||''); setValue('recAnoRef',r.year); setValue('recPagoAgora',inputMoney(r.paidNow)); all('.month-check').forEach(c=>c.checked=(r.months||[]).map(Number).includes(Number(c.value))); showTab('recibo'); updatePreview(); });
-  tb.querySelectorAll('[data-del]').forEach(b=>b.onclick=()=>{ if(confirm('Excluir este recibo? O saldo dos apartamentos será recalculado.')){ state.recibos=state.recibos.filter(r=>r.id!==b.dataset.del); save(K.recibos,state.recibos); recalculateBalances(); renderAll(); }});
-}
-function recalculateBalances(){ state.aptos.forEach(a=>{ if(a.name===FIXOS.isento){a.balance=0;a.exemptCondo=true;} else a.balance=0; }); state.recibos.slice().sort((a,b)=>(a.createdAt||0)-(b.createdAt||0)).forEach(r=>{ const a=state.aptos.find(x=>x.name===r.apartmentName||x.id===r.apartmentName); if(a&&!a.exemptCondo){ a.balance=Math.max(0,Number(a.balance||0)+Number(r.launchedNow||0)-Number(r.paidNow||0)); a.residentName=r.residentName||a.residentName; }}); save(K.aptos,state.aptos); }
-
-async function logo(){ if(state.logoData) return state.logoData; const cached=localStorage.getItem(K.logo); if(cached){ state.logoData=cached; return cached; } try{ const res=await fetch(FIXOS.logo,{cache:'no-store'}); const blob=await res.blob(); const data=await new Promise((ok,err)=>{ const fr=new FileReader(); fr.onload=()=>ok(fr.result); fr.onerror=err; fr.readAsDataURL(blob); }); state.logoData=data; localStorage.setItem(K.logo,data); return data; }catch(e){ return ''; } }
-async function pdfBase(title){ if(!window.jspdf) { alert('Biblioteca PDF não carregou. Verifique a internet e tente de novo.'); return null; } const {jsPDF}=window.jspdf; const doc=new jsPDF({unit:'mm',format:'a4'}); const lg=await logo(); let y=12; if(lg){ try{ doc.addImage(lg, lg.startsWith('data:image/jpeg')?'JPEG':'PNG', 91, 8, 28, 28); y=42; }catch(e){} } doc.setFont('helvetica','bold'); doc.setFontSize(14); doc.text(title,14,y); y+=7; doc.setFont('helvetica','normal'); doc.setFontSize(10); doc.text(`${FIXOS.rua} / ${FIXOS.bairro} — CEP ${FIXOS.cep}`,14,y); y+=6; doc.line(14,y,196,y); y+=12; return {doc,y}; }
-async function generateReceiptPDF(r){ const b=await pdfBase(`RECIBO Nº ${r.number}`); if(!b) return; const {doc}=b; let y=b.y; doc.setFontSize(12); doc.text(`Recebido de: ${r.residentName||''}`,14,y); y+=8; doc.text(`Endereço: ${endereco(r.apartmentName)}`,14,y); y+=8; doc.text(`CEP: ${FIXOS.cep}`,14,y); y+=10; doc.text(`Referente a: Condomínio`,14,y); y+=8; doc.text(`Mês/Referência: ${(r.months||[]).map(m=>monthYear(m,r.year)).join(', ')}`,14,y); y+=10; doc.setFont('helvetica','bold'); doc.text('Valores recebidos:',14,y); y+=8; doc.setFont('helvetica','normal'); doc.text(`Condomínio: ${money(r.launchedNow||0)}`,14,y); y+=8; doc.setFont('helvetica','bold'); doc.text(`TOTAL: ${money(r.paidNow||0)}`,14,y); y+=10; if((r.previousBalance||0)>0 || (r.remainingBalance||0)>0){ doc.setFont('helvetica','normal'); doc.text(`Saldo anterior: ${money(r.previousBalance||0)}`,14,y); y+=8; doc.text(`Valor pago: ${money(r.paidNow||0)}`,14,y); y+=8; doc.text(`Saldo restante: ${money(Math.max(0,r.remainingBalance||0))}`,14,y); y+=10; } doc.text(`${FIXOS.cidade}, dia ${r.issueDay} de ${MESES[r.issueMonth]} de ${r.issueYear}`,14,y); y+=10; doc.text(`Emitente: ${FIXOS.emitente}`,14,y); doc.save(`Recibo_${r.number}_${r.apartmentName}.pdf`); }
-async function generateExpensePDF(e){ const b=await pdfBase('COMPROVANTE DE DESPESA'); if(!b) return; const {doc}=b; let y=b.y; doc.setFontSize(12); doc.text(`Data: ${String(e.day).padStart(2,'0')}/${String(Number(e.month)+1).padStart(2,'0')}/${e.year}`,14,y); y+=8; doc.text(`Categoria: ${e.category}`,14,y); y+=8; doc.text(`Descrição: ${e.description||''}`,14,y); y+=8; doc.setFont('helvetica','bold'); doc.text(`Valor: ${money(e.value)}`,14,y); doc.save(`Despesa_${e.category}_${e.year}.pdf`); }
-async function statementPDF(title, receipts, expenses){ const b=await pdfBase(title); if(!b) return; const {doc}=b; let y=b.y; const recebido=receipts.reduce((s,r)=>s+Number(r.paidNow||0),0); const desp=expenses.reduce((s,e)=>s+Number(e.value||0),0); const esperado=Number(state.caixa.saldoInicial||0)+recebido-desp; const real=Number(state.caixa.saldoReal||0); doc.setFontSize(12); doc.text(`Saldo inicial: ${money(state.caixa.saldoInicial)}`,14,y); y+=8; doc.text(`Total recebido: ${money(recebido)}`,14,y); y+=8; doc.text(`Total despesas: ${money(desp)}`,14,y); y+=8; doc.text(`Saldo esperado: ${money(esperado)}`,14,y); y+=8; doc.text(`Saldo real: ${money(real)}`,14,y); y+=8; doc.setFont('helvetica','bold'); doc.text(`Diferença: ${money(real-esperado)} — ${real-esperado>=0?'POSITIVO':'NEGATIVO'}`,14,y); y+=12; doc.setFont('helvetica','bold'); doc.text('Despesas:',14,y); y+=8; doc.setFont('helvetica','normal'); doc.setFontSize(10); if(!expenses.length) doc.text('Nenhuma despesa lançada.',14,y); expenses.forEach(e=>{ const line=`${String(e.day).padStart(2,'0')}/${String(Number(e.month)+1).padStart(2,'0')}/${e.year} — ${e.category} — ${money(e.value)} ${e.description||''}`; const parts=doc.splitTextToSize(line,180); doc.text(parts,14,y); y+=parts.length*5; if(y>275){doc.addPage(); y=20;} }); doc.save(title.replace(/\s+/g,'_')+'.pdf'); }
-function saveCaixa(){ state.caixa={saldoInicial:parseMoney(val('saldoInicial')), saldoReal:parseMoney(val('saldoReal'))}; save(K.caixa,state.caixa); renderAll(); }
-function renderAll(){ renderAptos(); renderDespesas(); renderHistorico(); }
-function showTab(name){ all('.sidebtn').forEach(b=>b.classList.toggle('active',b.dataset.tab===name)); all('.panel').forEach(p=>p.classList.add('hidden')); const p=$('tab-'+name); if(p) p.classList.remove('hidden'); }
-function wire(){
-  all('.sidebtn').forEach(b=>b.addEventListener('click',()=>showTab(b.dataset.tab)));
-  ['recApto','recNome','recAnoRef','recPagoAgora','ckCondo'].forEach(id=>{ const e=$(id); if(e){ e.addEventListener('input',updatePreview); e.addEventListener('change',updatePreview); }});
-  all('.month-check').forEach(e=>e.addEventListener('change',updatePreview));
-  const g=$('btnGerarRecibo'); if(g) g.onclick=saveReceipt; const ld=$('btnLimparRecibo'); if(ld) ld.onclick=()=>{ setValue('editingReceiptId',''); setValue('recNome',''); setValue('recPagoAgora','0,00'); updatePreview(); };
-  const ad=$('btnAddDesp'); if(ad) ad.onclick=addExpense; const cl=$('btnLimparDesp'); if(cl) cl.onclick=()=>{ setValue('editingExpenseId',''); setValue('despValor',''); setValue('despDesc',''); };
-  const af=$('btnAplicarFiltro'); if(af) af.onclick=renderAll; const sc=$('btnSalvarCaixa'); if(sc) sc.onclick=saveCaixa;
-  const recalc=$('btnRecalcular'); if(recalc) recalc.onclick=()=>{ recalculateBalances(); renderAll(); alert('Histórico recalculado.'); };
-  const m=$('btnPDFMes'); if(m) m.onclick=()=>{ const f=filter(); if(f.m===null) return alert('Selecione um mês específico.'); statementPDF(`PRESTAÇÃO DE CONTAS ${monthYear(f.m,f.y)}`, filtRec(), filtDesp()); };
-  const a=$('btnPDFAno'); if(a) a.onclick=()=>statementPDF(`PRESTAÇÃO DE CONTAS ${filter().y}`, filtRec(), filtDesp());
-  const c=$('btnPDFCompleta'); if(c) c.onclick=()=>statementPDF('PRESTAÇÃO DE CONTAS COMPLETA', state.recibos, state.despesas);
-  const pm=$('btnPDFPrestacaoMes'); if(pm) pm.onclick=()=>{ const f=filter(); if(f.m===null) return alert('Selecione um mês específico no Histórico.'); statementPDF(`PRESTAÇÃO DE CONTAS ${monthYear(f.m,f.y)}`, filtRec(), filtDesp()); };
-  const pa=$('btnPDFPrestacaoAno'); if(pa) pa.onclick=()=>statementPDF(`PRESTAÇÃO DE CONTAS ${filter().y}`, filtRec(), filtDesp());
-  const lote=$('btnPDFLote'); if(lote) lote.onclick=()=>{ filtRec().forEach(r=>generateReceiptPDF(r)); };
-  const cat=$('despCat'); if(cat) cat.onchange=()=>{ if(cat.value==='Zelador (Tião)') setValue('despValor','250,00'); if(cat.value==='Material limpeza') setValue('despValor','50,00'); };
-}
-
-function boot(){ try{ initData(); fillSelects(); updatePreview(); renderAll(); wire(); }catch(err){ console.error(err); alert('Erro ao iniciar o sistema: '+err.message); } }
-if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', boot); else boot();
-})();
+function setReceipts(v){state.receipts=v;save(STORAGE.receipts,v)}function setExpenses(v){state.expenses=v;save(STORAGE.expenses,v)}function setApartments(v){state.apartments=v;save(STORAGE.apartments,v)}function setBalances(v){state.balances=v;save(STORAGE.balances,v)}
+function syncSeq(){let max=0;state.receipts.forEach(r=>{const n=Number(String(r.number||"").replace(/\D/g,""))||0;if(n>max)max=n});const cur=Number(localStorage.getItem(STORAGE.seq)||"0");if(max>cur)localStorage.setItem(STORAGE.seq,String(max))}
+function nextNumber(){syncSeq();return pad((Number(localStorage.getItem(STORAGE.seq)||"0")||0)+1)}function consumeNumber(){syncSeq();const n=(Number(localStorage.getItem(STORAGE.seq)||"0")||0)+1;localStorage.setItem(STORAGE.seq,String(n));return pad(n)}
+function fillMonths(sel,all=false){if(!sel)return;sel.innerHTML="";if(all){const o=document.createElement("option");o.value="-1";o.textContent="Todos";sel.appendChild(o)}MESES.forEach((m,i)=>{const o=document.createElement("option");o.value=i;o.textContent=m;sel.appendChild(o)})}
+function fillDays(sel){if(!sel)return;sel.innerHTML="";for(let i=1;i<=31;i++){const o=document.createElement("option");o.value=i;o.textContent=i;sel.appendChild(o)}}
+function fillAptos(){const sel=qs("#recApto");if(!sel)return;sel.innerHTML="";state.apartments.slice().sort((a,b)=>a.name.localeCompare(b.name)).forEach(a=>{const o=document.createElement("option");o.value=a.id;o.textContent=a.name+(a.exempt?" (isento)":"");sel.appendChild(o)})}
+function apt(id){return state.apartments.find(a=>a.id===id)}
+function keyYM(y,m){return y+"_"+m}function getBalance(y,m){return state.balances[keyYM(y,m)]||{initial:0,real:0}}
+function saveBalanceInputs(){const y=Number(qs("#prestAno").value)||now().year;const m=Number(qs("#prestMes").value);state.balances[keyYM(y,m)]={initial:moneyToNumber(qs("#saldoInicial").value),real:moneyToNumber(qs("#saldoReal").value)};setBalances(state.balances);renderPrestacao();alert("Saldos salvos.")}
+function loadBalanceInputs(){const y=Number(qs("#prestAno").value)||now().year;const m=Number(qs("#prestMes").value);const b=getBalance(y,m);qs("#saldoInicial").value=inputMoney(b.initial);qs("#saldoReal").value=inputMoney(b.real);renderPrestacao()}
+function initTabs(){qsa(".sidebtn").forEach(btn=>btn.addEventListener("click",()=>{qsa(".sidebtn").forEach(b=>b.classList.remove("active"));btn.classList.add("active");qsa(".panel").forEach(p=>p.classList.add("hidden"));const p=qs("#tab-"+btn.dataset.tab);if(p)p.classList.remove("hidden")}))}
+function updateNameFromApt(){const a=apt(qs("#recApto").value);if(!a)return;qs("#recNome").value=a.residentName||"";qs("#recValor").value=inputMoney(a.exempt?0:FIXOS.taxa);refreshPreview()}
+function recData(){const a=apt(qs("#recApto").value);const t=now();const name=(qs("#recNome").value||"").trim();return{number:qs("#recNumero").value||nextNumber(),apartmentId:a?a.id:"",apartmentName:a?a.name:"",residentName:name||((a&&a.residentName)||""),displayName:name||((a&&a.residentName)||"")||((a&&a.name)||"Apartamento"),value:moneyToNumber(qs("#recValor").value),referente:qs("#recReferente").value,day:Number(qs("#recDia").value)||t.day,month:Number(qs("#recMes").value)||t.month,year:Number(qs("#recAno").value)||t.year,obs:(qs("#recObs").value||"").trim()}}
+function refreshPreview(){const d=recData();const lines=[];lines.push(`RECIBO Nº ${d.number}`);lines.push("");lines.push(`Recebido de: ${d.displayName}`);lines.push(`Endereço: ${FIXOS.rua} — Apto ${d.apartmentName} / ${FIXOS.bairro}`);lines.push(`CEP: ${FIXOS.cep}`);lines.push("");lines.push(`Referente a: ${d.referente}`);lines.push(`Mês/Referência: ${monthYear(d.month,d.year)}`);lines.push("");lines.push(`Valor recebido: ${money(d.value)}`);if(d.obs)lines.push(`Observação: ${d.obs}`);lines.push("");lines.push(`${FIXOS.cidade}, dia ${d.day} de ${MESES[d.month]} de ${d.year}`);lines.push("");lines.push(`Emitente: ${FIXOS.emitente}`);qs("#recPreview").textContent=lines.join("\n")}
+function saveReceipt(download=true){const d=recData();if(!d.apartmentName){alert("Selecione um apartamento.");return}if(d.value<=0){alert("Digite o valor recebido.");return}const number=consumeNumber();const item={...d,id:uid(),number,createdAt:Date.now()};const aps=state.apartments.slice();const a=aps.find(x=>x.id===item.apartmentId);if(a&&qs("#recNome").value.trim()){a.residentName=qs("#recNome").value.trim();setApartments(aps)}setReceipts([...state.receipts,item]);qs("#recNumero").value=nextNumber();qs("#recObs").value="";renderAll();if(download)generateReceiptPDF(item)}
+function renderApartments(){const tb=qs("#tbodyApartamentos");if(!tb)return;tb.innerHTML="";state.apartments.slice().sort((a,b)=>a.name.localeCompare(b.name)).forEach(a=>{const tr=document.createElement("tr");const obs=a.exempt?"Síndica / isento":"Normal";tr.innerHTML=`<td>${a.name}</td><td><input data-apname="${a.id}" value="${a.residentName||""}" placeholder="Nome opcional"></td><td>${a.exempt?"Sim":"Não"}</td><td>${obs}</td><td class="actions"><button class="linkbtn" data-saveap="${a.id}">Salvar</button></td>`;tb.appendChild(tr)});tb.querySelectorAll("[data-saveap]").forEach(b=>b.addEventListener("click",()=>{const id=b.dataset.saveap;const aps=state.apartments.slice();const a=aps.find(x=>x.id===id);if(a){a.residentName=tb.querySelector(`[data-apname="${id}"]`).value.trim();setApartments(aps);fillAptos();renderApartments();updateNameFromApt();alert("Nome salvo.")}}))}
+function addExpense(){const v=moneyToNumber(qs("#despValor").value);if(v<=0){alert("Digite o valor da despesa.");return}const item={id:uid(),day:Number(qs("#despDia").value),month:Number(qs("#despMes").value),year:Number(qs("#despAno").value),category:qs("#despCat").value,description:qs("#despDesc").value.trim(),value:v,createdAt:Date.now()};setExpenses([...state.expenses,item]);qs("#despValor").value="";qs("#despDesc").value="";renderAll()}
+function renderExpenses(){const tb=qs("#tbodyDespesas");if(!tb)return;tb.innerHTML="";state.expenses.slice().sort((a,b)=>b.createdAt-a.createdAt).forEach(e=>tb.appendChild(expRow(e)))}
+function expRow(e){const tr=document.createElement("tr");tr.innerHTML=`<td>${dateLabel(e.day,e.month,e.year)}</td><td>${e.category}</td><td>${e.description||""}</td><td>${money(e.value)}</td><td class="actions"><button class="linkbtn" data-editexp="${e.id}">Editar</button><button class="linkbtn danger" data-delexp="${e.id}">Excluir</button></td>`;return tr}
+function filters(){const y=Number(qs("#histAno").value)||null;const mr=Number(qs("#histMes").value);return{year:y,month:mr>=0?mr:null}}
+function filteredReceipts(year,month){return state.receipts.filter(r=>(!year||r.year===year)&&(month===null||r.month===month))}function filteredExpenses(year,month){return state.expenses.filter(e=>(!year||e.year===year)&&(month===null||e.month===month))}
+function totals(year,month){const rec=filteredReceipts(year,month),exp=filteredExpenses(year,month);return{received:rec.reduce((s,r)=>s+Number(r.value||0),0),spent:exp.reduce((s,e)=>s+Number(e.value||0),0),rec,exp}}
+function renderHistory(){const {year,month}=filters();const t=totals(year,month);qs("#histTotais").innerHTML=`<div><b>Total recebido:</b> ${money(t.received)}</div><div><b>Total despesas:</b> ${money(t.spent)}</div><div><b>Resultado:</b> ${money(t.received-t.spent)}</div>`;const rb=qs("#tbodyReceitas");rb.innerHTML="";t.rec.slice().sort((a,b)=>b.createdAt-a.createdAt).forEach(r=>{const tr=document.createElement("tr");tr.innerHTML=`<td>${r.number}</td><td>${dateLabel(r.day,r.month,r.year)}</td><td>${r.apartmentName}</td><td>${r.displayName||r.residentName||r.apartmentName}</td><td>${r.referente}</td><td>${money(r.value)}</td><td class="actions"><button class="linkbtn" data-pdfrec="${r.id}">PDF</button><button class="linkbtn" data-editrec="${r.id}">Editar</button><button class="linkbtn danger" data-delrec="${r.id}">Excluir</button></td>`;rb.appendChild(tr)});const eb=qs("#tbodyHistDespesas");eb.innerHTML="";t.exp.slice().sort((a,b)=>b.createdAt-a.createdAt).forEach(e=>eb.appendChild(expRow(e)));wireDynamicButtons()}
+function renderPrestacao(){const y=Number(qs("#prestAno").value)||now().year;const m=Number(qs("#prestMes").value);const b=getBalance(y,m);const t=totals(y,m);const expected=b.initial+t.received-t.spent;const diff=b.real-expected;const cls=diff>=0?"positivo":"negativo";const label=diff>=0?"🟢 POSITIVO — sobrou":"🔴 NEGATIVO — falta";qs("#prestResumo").innerHTML=`<div class="resumoCard"><div class="label">Saldo inicial</div><div class="value">${money(b.initial)}</div></div><div class="resumoCard"><div class="label">Total recebido</div><div class="value positivo">${money(t.received)}</div></div><div class="resumoCard"><div class="label">Total despesas</div><div class="value negativo">${money(t.spent)}</div></div><div class="resumoCard"><div class="label">Saldo esperado</div><div class="value">${money(expected)}</div></div><div class="resumoCard"><div class="label">Saldo real</div><div class="value">${money(b.real)}</div></div><div class="resumoCard"><div class="label">Diferença</div><div class="value ${cls}">${money(diff)}</div></div><div class="resumoCard"><div class="label">Situação</div><div class="value ${cls}">${label}</div></div><div class="resumoCard"><div class="label">Resumo</div><div class="value">${diff>=0?"Sobrou "+money(diff):"Falta "+money(Math.abs(diff))}</div></div>`}
+function wireDynamicButtons(){document.querySelectorAll("[data-delrec]").forEach(b=>b.onclick=()=>{if(confirm("Excluir este recibo/receita?")){setReceipts(state.receipts.filter(r=>r.id!==b.dataset.delrec));renderAll()}});document.querySelectorAll("[data-pdfrec]").forEach(b=>b.onclick=()=>{const r=state.receipts.find(x=>x.id===b.dataset.pdfrec);if(r)generateReceiptPDF(r)});document.querySelectorAll("[data-editrec]").forEach(b=>b.onclick=()=>editReceipt(b.dataset.editrec));document.querySelectorAll("[data-delexp]").forEach(b=>b.onclick=()=>{if(confirm("Excluir esta despesa?")){setExpenses(state.expenses.filter(e=>e.id!==b.dataset.delexp));renderAll()}});document.querySelectorAll("[data-editexp]").forEach(b=>b.onclick=()=>editExpense(b.dataset.editexp))}
+function editReceipt(id){const r=state.receipts.find(x=>x.id===id);if(!r)return;const novo=prompt("Novo valor recebido:",inputMoney(r.value));if(novo===null)return;const val=moneyToNumber(novo);if(val<=0){alert("Valor inválido.");return}r.value=val;const nome=prompt("Nome do morador/proprietário (opcional):",r.residentName||"");if(nome!==null){r.residentName=nome.trim();r.displayName=nome.trim()||r.apartmentName}setReceipts(state.receipts);renderAll()}
+function editExpense(id){const e=state.expenses.find(x=>x.id===id);if(!e)return;const novo=prompt("Novo valor da despesa:",inputMoney(e.value));if(novo===null)return;const val=moneyToNumber(novo);if(val<=0){alert("Valor inválido.");return}e.value=val;const desc=prompt("Descrição:",e.description||"");if(desc!==null)e.description=desc.trim();setExpenses(state.expenses);renderAll()}
+async function logoData(){if(state.logoData)return state.logoData;const c=localStorage.getItem(STORAGE.logo);if(c){state.logoData=c;return c}try{const res=await fetch(FIXOS.logo,{cache:"no-store"});const blob=await res.blob();const data=await new Promise((ok,err)=>{const rd=new FileReader();rd.onload=()=>ok(rd.result);rd.onerror=err;rd.readAsDataURL(blob)});state.logoData=data;localStorage.setItem(STORAGE.logo,data);return data}catch(e){return""}}
+function pdfHead(doc,title){doc.setFont("helvetica","bold");doc.setFontSize(14);doc.text(title,14,18);doc.setFont("helvetica","normal");doc.setFontSize(10);doc.text(`${FIXOS.rua} / ${FIXOS.bairro} — CEP ${FIXOS.cep}`,14,25);doc.line(14,29,196,29);return 40}
+async function generateReceiptPDF(r){const {jsPDF}=window.jspdf||{};if(!jsPDF){alert("PDF não carregou. Verifique a internet e tente novamente.");return}const doc=new jsPDF({unit:"mm",format:"a4"});let y=pdfHead(doc,`RECIBO Nº ${r.number}`);doc.setFontSize(12);doc.text(`Recebido de: ${r.displayName||r.residentName||r.apartmentName}`,14,y);y+=8;doc.text(`Endereço: ${FIXOS.rua} — Apto ${r.apartmentName} / ${FIXOS.bairro}`,14,y);y+=8;doc.text(`CEP: ${FIXOS.cep}`,14,y);y+=10;doc.text(`Referente a: ${r.referente}`,14,y);y+=8;doc.text(`Mês/Referência: ${monthYear(r.month,r.year)}`,14,y);y+=10;doc.setFont("helvetica","bold");doc.text(`Valor recebido: ${money(r.value)}`,14,y);y+=12;doc.setFont("helvetica","normal");if(r.obs){doc.text(`Observação: ${r.obs}`,14,y);y+=8}doc.text(`${FIXOS.cidade}, dia ${r.day} de ${MESES[r.month]} de ${r.year}`,14,y);y+=12;doc.text(`Emitente: ${FIXOS.emitente}`,14,y);doc.save(`Recibo_${r.number}_${r.apartmentName}.pdf`)}
+async function statementPDF(scope){const {jsPDF}=window.jspdf||{};if(!jsPDF){alert("PDF não carregou.");return}const y0=scope==="year"?Number(qs("#prestAno").value):Number(qs("#prestAno").value);const m=Number(qs("#prestMes").value);let rec,exp,title,b={initial:0,real:0};if(scope==="year"){rec=state.receipts.filter(r=>r.year===y0);exp=state.expenses.filter(e=>e.year===y0);title=`PRESTAÇÃO DE CONTAS — ${y0}`}else if(scope==="all"){rec=state.receipts;exp=state.expenses;title="PRESTAÇÃO DE CONTAS COMPLETA"}else{rec=filteredReceipts(y0,m);exp=filteredExpenses(y0,m);b=getBalance(y0,m);title=`PRESTAÇÃO DE CONTAS — ${monthYear(m,y0)}`}const received=rec.reduce((s,r)=>s+Number(r.value||0),0),spent=exp.reduce((s,e)=>s+Number(e.value||0),0),expected=b.initial+received-spent,diff=b.real-expected;const doc=new jsPDF({unit:"mm",format:"a4"});let y=pdfHead(doc,title);doc.setFontSize(12);doc.text(`Saldo inicial: ${money(b.initial)}`,14,y);y+=8;doc.text(`Total recebido: ${money(received)}`,14,y);y+=8;doc.text(`Total despesas: ${money(spent)}`,14,y);y+=8;doc.text(`Saldo esperado: ${money(expected)}`,14,y);y+=8;doc.text(`Saldo real: ${money(b.real)}`,14,y);y+=8;doc.text(`Diferença: ${money(diff)} — ${diff>=0?"POSITIVO":"NEGATIVO"}`,14,y);y+=12;doc.setFont("helvetica","bold");doc.text("Receitas:",14,y);y+=7;doc.setFont("helvetica","normal");doc.setFontSize(10);rec.forEach(r=>{const line=`${dateLabel(r.day,r.month,r.year)} — ${r.apartmentName} — ${r.displayName||r.apartmentName} — ${r.referente} — ${money(r.value)}`;const sp=doc.splitTextToSize(line,180);doc.text(sp,14,y);y+=sp.length*5;if(y>275){doc.addPage();y=20}});y+=6;doc.setFont("helvetica","bold");doc.text("Despesas:",14,y);y+=7;doc.setFont("helvetica","normal");exp.forEach(e=>{const line=`${dateLabel(e.day,e.month,e.year)} — ${e.category} — ${money(e.value)}${e.description?" — "+e.description:""}`;const sp=doc.splitTextToSize(line,180);doc.text(sp,14,y);y+=sp.length*5;if(y>275){doc.addPage();y=20}});doc.save(title.replace(/\s+/g,"_").replace(/[\/]/g,"-")+".pdf")}
+function renderAll(){renderApartments();renderExpenses();renderHistory();renderPrestacao();refreshPreview()}
+function defaults(){const t=now();fillAptos();fillDays(qs("#recDia"));fillMonths(qs("#recMes"));fillDays(qs("#despDia"));fillMonths(qs("#despMes"));fillMonths(qs("#prestMes"));fillMonths(qs("#histMes"),true);qs("#recNumero").value=nextNumber();qs("#recDia").value=t.day;qs("#recMes").value=t.month;qs("#recAno").value=t.year;qs("#recValor").value=inputMoney(FIXOS.taxa);qs("#despDia").value=t.day;qs("#despMes").value=t.month;qs("#despAno").value=t.year;qs("#prestMes").value=t.month;qs("#prestAno").value=t.year;qs("#histMes").value="-1";qs("#histAno").value=t.year;loadBalanceInputs();updateNameFromApt()}
+function wire(){initTabs();["#recApto","#recNome","#recValor","#recReferente","#recDia","#recMes","#recAno","#recObs"].forEach(s=>{const e=qs(s);if(e){e.addEventListener("input",refreshPreview);e.addEventListener("change",refreshPreview)}});qs("#recApto").addEventListener("change",updateNameFromApt);qs("#btnSalvarRecibo").addEventListener("click",()=>saveReceipt(true));qs("#btnSalvarSemPdf").addEventListener("click",()=>saveReceipt(false));qs("#btnAddDesp").addEventListener("click",addExpense);qs("#btnFiltrarHist").addEventListener("click",renderHistory);qs("#btnSalvarSaldos").addEventListener("click",saveBalanceInputs);qs("#prestMes").addEventListener("change",loadBalanceInputs);qs("#prestAno").addEventListener("input",loadBalanceInputs);qs("#btnPdfMensal").addEventListener("click",()=>statementPDF("month"));qs("#btnPdfAnual").addEventListener("click",()=>statementPDF("year"));qs("#btnPdfCompleta").addEventListener("click",()=>statementPDF("all"));["#despCat"].forEach(s=>{const e=qs(s);e.addEventListener("change",()=>{if(e.value==="Zelador (Tião)")qs("#despValor").value="250,00";if(e.value==="Material limpeza")qs("#despValor").value="50,00"})})}
+window.addEventListener("error",e=>{console.error(e.error||e.message);alert("O sistema encontrou um erro no JavaScript. Me envie um print do console se continuar.")});
+(function boot(){initData();defaults();wire();renderAll()})();

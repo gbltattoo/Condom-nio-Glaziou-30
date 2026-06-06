@@ -13,25 +13,26 @@
       <img src="logo.png" alt="Logo Glaziou 30" class="brandlogo" />
       <div>
         <h1>Condomínio — Rua Glaziou, 30</h1>
-        <p class="muted">Recibos • Prestação de contas • Controle de caixa</p>
+        <p class="muted">Recibos • Receitas • Despesas • Prestação de contas</p>
       </div>
     </div>
   </header>
 
   <main class="layout">
     <aside class="sidebar">
-      <button class="sidebtn active" data-tab="recibo">Recibo</button>
+      <button class="sidebtn active" data-tab="recibo">Recibo / Receita</button>
       <button class="sidebtn" data-tab="apartamentos">Apartamentos</button>
       <button class="sidebtn" data-tab="despesas">Despesas</button>
       <button class="sidebtn" data-tab="prestacao">Prestação de contas</button>
       <button class="sidebtn" data-tab="historico">Histórico</button>
+
       <div class="sidebox">
-        <div class="muted small">Dados fixos</div>
+        <div class="muted small">Fixos</div>
         <div><b>Endereço:</b> Rua Glaziou, 30 / Pilares - RJ</div>
         <div><b>CEP:</b> 20750-010</div>
         <div><b>Cidade:</b> Rio de Janeiro</div>
         <div><b>Emitente:</b> Gabriel Brito Cirilo</div>
-        <div><b>Condomínio:</b> R$ 160,00</div>
+        <div><b>Condomínio padrão:</b> R$ 160,00</div>
         <div><b>Isento:</b> 101 Fundos</div>
       </div>
     </aside>
@@ -40,84 +41,91 @@
       <section class="panel" id="tab-recibo">
         <div class="grid two">
           <div class="card">
-            <h2>Emitir recibo</h2>
-            <input type="hidden" id="editingReceiptId" />
+            <h2>Recibo / Entrada de dinheiro</h2>
+            <p class="muted">Lance manualmente o valor que o apartamento pagou. Não gera dívida automática.</p>
+
             <div class="row">
-              <div class="field"><label>Nº do recibo</label><input id="recNumero" type="text" readonly /></div>
+              <div class="field"><label>Nº do recibo</label><input id="recNumero" readonly /></div>
               <div class="field"><label>Apartamento</label><select id="recApto"></select></div>
             </div>
-            <div class="row"><div class="field"><label>Recebido de</label><input id="recNome" type="text" placeholder="Nome do morador/proprietário" /></div></div>
+
             <div class="row">
-              <div class="field"><label>Ano de referência</label><input id="recAnoRef" type="number" min="2020" max="2100" /></div>
-              <div class="field"><label>Dia do recibo</label><input id="recDiaAtual" type="number" min="1" max="31" /></div>
+              <div class="field"><label>Nome do morador/proprietário (opcional)</label><input id="recNome" placeholder="Se deixar vazio, aparece o apartamento" /></div>
             </div>
+
             <div class="row">
-              <label class="check"><input type="checkbox" id="ckCondo" checked /> <span>Condomínio</span></label>
+              <div class="field"><label>Valor recebido</label><input id="recValor" inputmode="decimal" placeholder="160,00" /></div>
+              <div class="field"><label>Referente a</label><select id="recReferente"><option>Condomínio</option><option>Taxa extra</option><option>Outro recebimento</option></select></div>
             </div>
+
             <div class="row">
-              <div class="field"><label>Valor do condomínio</label><input id="recCondominio" type="text" readonly /></div>
+              <div class="field"><label>Dia</label><select id="recDia"></select></div>
+              <div class="field"><label>Mês de referência</label><select id="recMes"></select></div>
+              <div class="field"><label>Ano</label><input id="recAno" type="number" min="2020" max="2100" /></div>
             </div>
+
             <div class="row">
-              <div class="field"><label>Saldo anterior da unidade</label><input id="recSaldoAnterior" type="text" readonly /></div>
-              <div class="field"><label>Valor pago agora</label><input id="recPagoAgora" type="text" inputmode="decimal" value="0,00" /></div>
+              <div class="field"><label>Observação</label><input id="recObs" placeholder="Opcional" /></div>
             </div>
+
             <div class="row">
-              <div class="field"><label>Total lançado</label><input id="recTotalLancado" type="text" readonly /></div>
-              <div class="field"><label>Saldo restante</label><input id="recSaldoRestante" type="text" readonly /></div>
+              <button class="btn" id="btnSalvarRecibo">Salvar e baixar recibo PDF</button>
+              <button class="btn ghost" id="btnSalvarSemPdf">Salvar sem PDF</button>
             </div>
-            <div class="row"><div class="field"><label>Situação</label><input id="recSituacao" type="text" readonly /></div></div>
-            <h3>Meses para gerar</h3>
-            <div id="monthChecklist" class="months-grid"></div>
-            <div class="row">
-              <button class="btn" id="btnGerarRecibo">Gerar recibo e salvar</button>
-              <button class="btn ghost" id="btnLimparRecibo">Limpar</button>
-            </div>
-            <div class="note"><b>Endereço:</b> <span id="enderecoLinha"></span><br/><b>CEP:</b> 20750-010</div>
           </div>
-          <div class="card"><h2>Prévia</h2><div class="preview" id="recPreview"></div></div>
+
+          <div class="card">
+            <h2>Prévia</h2>
+            <div class="preview" id="recPreview"></div>
+          </div>
         </div>
       </section>
 
       <section class="panel hidden" id="tab-apartamentos">
         <div class="card">
-          <div class="row between"><div><h2>Apartamentos</h2><p class="muted">101 Fundos fica isento automaticamente do condomínio e não entra no saldo esperado.</p></div><button class="btn" id="btnRecalcular">Recalcular histórico</button></div>
-          <div class="tablewrap"><table><thead><tr><th>Apto</th><th>Nome</th><th>Saldo devedor</th><th>Justificativa</th><th>Valor pago avulso</th><th>Isento</th><th>Ações</th></tr></thead><tbody id="tbodyApartamentos"></tbody></table></div>
+          <h2>Apartamentos</h2>
+          <p class="muted">O nome fica salvo por apartamento e aparece automático no recibo.</p>
+          <div class="tablewrap"><table><thead><tr><th>Apartamento</th><th>Nome salvo</th><th>Isento</th><th>Observação</th><th>Ações</th></tr></thead><tbody id="tbodyApartamentos"></tbody></table></div>
         </div>
       </section>
 
       <section class="panel hidden" id="tab-despesas">
         <div class="grid two">
           <div class="card">
-            <h2>Despesas</h2><input type="hidden" id="editingExpenseId" />
+            <h2>Despesas / Saída de dinheiro</h2>
+            <p class="muted">Água, Light, zelador, material e manutenção entram aqui.</p>
             <div class="row"><div class="field"><label>Dia</label><select id="despDia"></select></div><div class="field"><label>Mês</label><select id="despMes"></select></div><div class="field"><label>Ano</label><input id="despAno" type="number" min="2020" max="2100" /></div></div>
-            <div class="row"><div class="field"><label>Categoria</label><select id="despCat"><option value="Zelador (Tião)">Zelador (Tião)</option><option value="Material limpeza">Material limpeza</option><option value="Água">Água</option><option value="Light (Conta de luz)">Light (Conta de luz)</option><option value="Manutenção">Manutenção</option><option value="Outros">Outros</option></select></div><div class="field"><label>Valor</label><input id="despValor" type="text" inputmode="decimal" /></div></div>
-            <div class="row"><div class="field"><label>Descrição</label><input id="despDesc" type="text" /></div></div>
-            <div class="row"><button class="btn" id="btnAddDesp">Salvar despesa</button><button class="btn ghost" id="btnLimparDesp">Limpar</button></div>
+            <div class="row"><div class="field"><label>Categoria</label><select id="despCat"><option>Zelador (Tião)</option><option>Água</option><option>Light (Conta de luz)</option><option>Material limpeza</option><option>Manutenção</option><option>Outros</option></select></div><div class="field"><label>Valor</label><input id="despValor" inputmode="decimal" /></div></div>
+            <div class="row"><div class="field"><label>Descrição</label><input id="despDesc" placeholder="Opcional" /></div></div>
+            <div class="row"><button class="btn" id="btnAddDesp">Adicionar despesa</button></div>
           </div>
-          <div class="card"><h2>Lista de despesas</h2><div class="tablewrap"><table><thead><tr><th>Data</th><th>Categoria</th><th>Descrição</th><th>Valor</th><th>Ações</th></tr></thead><tbody id="tbodyDespesas"></tbody></table></div></div>
+          <div class="card"><h2>Despesas lançadas</h2><div class="tablewrap"><table><thead><tr><th>Data</th><th>Categoria</th><th>Descrição</th><th>Valor</th><th>Ações</th></tr></thead><tbody id="tbodyDespesas"></tbody></table></div></div>
         </div>
       </section>
 
       <section class="panel hidden" id="tab-prestacao">
         <div class="card">
-          <h2>Prestação de contas / Caixa</h2>
-          <div class="row"><div class="field"><label>Saldo inicial</label><input id="saldoInicial" type="text" inputmode="decimal" /></div><div class="field"><label>Saldo real em conta</label><input id="saldoReal" type="text" inputmode="decimal" /></div><button class="btn" id="btnSalvarCaixa">Salvar caixa</button></div>
-          <div class="totals big" id="prestacaoResumo"></div>
-          <div class="row"><button class="btn" id="btnPDFPrestacaoMes">PDF prestação mensal</button><button class="btn" id="btnPDFPrestacaoAno">PDF prestação anual</button><button class="btn" id="btnPDFCompleta">PDF prestação completa</button></div>
+          <h2>Prestação de contas</h2>
+          <div class="row"><div class="field"><label>Mês</label><select id="prestMes"></select></div><div class="field"><label>Ano</label><input id="prestAno" type="number" min="2020" max="2100" /></div></div>
+          <div class="row"><div class="field"><label>Saldo inicial em caixa</label><input id="saldoInicial" inputmode="decimal" placeholder="0,00" /></div><div class="field"><label>Saldo real existente na conta</label><input id="saldoReal" inputmode="decimal" placeholder="0,00" /></div><button class="btn" id="btnSalvarSaldos">Salvar saldos</button></div>
+          <div class="cardsResumo" id="prestResumo"></div>
+          <div class="row"><button class="btn" id="btnPdfMensal">PDF prestação mensal</button><button class="btn" id="btnPdfAnual">PDF prestação anual</button><button class="btn ghost" id="btnPdfCompleta">PDF prestação completa</button></div>
         </div>
       </section>
 
       <section class="panel hidden" id="tab-historico">
         <div class="card">
-          <div class="row between"><div><h2>Histórico</h2><p class="muted">Baixe, edite, refaça ou exclua recibos antigos.</p></div><div class="inline"><div class="field smallfield"><label>Ano</label><input id="histAno" type="number" min="2020" max="2100" /></div><div class="field smallfield"><label>Mês</label><select id="histMes"></select></div><button class="btn ghost" id="btnAplicarFiltro">Aplicar</button></div></div>
+          <div class="row between"><div><h2>Histórico</h2><p class="muted">Recibos e lançamentos salvos.</p></div><div class="inline"><div class="field smallfield"><label>Ano</label><input id="histAno" type="number" /></div><div class="field smallfield"><label>Mês</label><select id="histMes"></select></div><button class="btn ghost" id="btnFiltrarHist">Aplicar</button></div></div>
           <div class="totals" id="histTotais"></div>
-          <div class="row"><button class="btn" id="btnPDFMes">Baixar prestação do mês</button><button class="btn" id="btnPDFAno">Baixar prestação do ano</button><button class="btn" id="btnPDFLote">PDF recibos filtrados</button></div>
-          <div class="tablewrap"><table><thead><tr><th>Nº</th><th>Ref.</th><th>Apto</th><th>Nome</th><th>Pago</th><th>Saldo restante</th><th>Emissão</th><th>Ações</th></tr></thead><tbody id="tbodyHistorico"></tbody></table></div>
+          <h3>Recibos / Receitas</h3>
+          <div class="tablewrap"><table><thead><tr><th>Nº</th><th>Data</th><th>Apto</th><th>Nome</th><th>Referente</th><th>Valor</th><th>Ações</th></tr></thead><tbody id="tbodyReceitas"></tbody></table></div>
+          <h3>Despesas</h3>
+          <div class="tablewrap"><table><thead><tr><th>Data</th><th>Categoria</th><th>Descrição</th><th>Valor</th><th>Ações</th></tr></thead><tbody id="tbodyHistDespesas"></tbody></table></div>
         </div>
       </section>
     </section>
   </main>
-  <footer class="footer"><span>Rua Glaziou, 30 / Pilares - RJ • CEP 20750-010 • Rio de Janeiro • Emitente: Gabriel Brito Cirilo</span></footer>
+  <footer class="footer">Rua Glaziou, 30 / Pilares - RJ • CEP 20750-010 • Rio de Janeiro • Emitente: Gabriel Brito Cirilo</footer>
   <script src="app.js"></script>
 </body>
 </html>
