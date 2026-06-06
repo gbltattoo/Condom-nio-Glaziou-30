@@ -146,7 +146,7 @@
       <section class="panel hidden" id="tab-prestacao">
         <div class="card">
           <h2>Prestação de contas / fechamento de caixa</h2>
-          <p class="muted">Escolha o período, informe o saldo inicial e o saldo real da conta. O sistema calcula quanto deveria existir, quanto existe, quanto falta ou sobra.</p>
+          <p class="muted">Escolha o período e informe o saldo real da conta. O saldo inicial fica zerado; o sistema calcula entradas menos despesas, compara com o saldo real e mostra quanto falta ou sobra.</p>
 
           <div class="row">
             <div class="field smallfield"><label>Ano inicial</label><input id="prestAnoInicio" type="number" min="2020" max="2100" /></div>
@@ -156,7 +156,7 @@
           </div>
 
           <div class="row">
-            <div class="field"><label>Saldo inicial em caixa</label><input id="saldoInicial" inputmode="decimal" placeholder="0,00" /></div>
+            <div class="field hidden"><label>Saldo inicial em caixa</label><input id="saldoInicial" inputmode="decimal" placeholder="0,00" value="0,00" /></div>
             <div class="field"><label>Saldo real existente na conta</label><input id="saldoReal" inputmode="decimal" placeholder="0,00" /></div>
             <button class="btn" id="btnSalvarSaldos">Salvar saldos deste período</button>
           </div>

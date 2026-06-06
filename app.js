@@ -8,7 +8,7 @@ const NOMES_PADRAO = {
   "101 Fundos": "Catia Maria",
   "201": "Edmea de Melo",
   "201 Sala": "Danilo Reis E Silva",
-  "201 Fundos": "",
+  "201 Fundos": "Idalina Morais",
   "301": "Marcia Valeria",
   "301 Sala": "Fernanda Telles",
   "301 Fundos": "Vagna Miranda"
@@ -16,18 +16,18 @@ const NOMES_PADRAO = {
 const OBS_PADRAO = { "101 Fundos": "Isento - Síndica" };
 const FIXOS = { taxa:160, emitente:"Gabriel Brito Cirilo", rua:"Rua Glaziou, 30", bairro:"Pilares - RJ", cep:"20750-010", cidade:"Rio de Janeiro", isento:"101 Fundos" };
 const STORAGE = {
-  apartments:"glz_apartamentos_caixa_v6",
-  receipts:"glz_receitas_caixa_v6",
-  expenses:"glz_despesas_caixa_v6",
-  seq:"glz_seq_caixa_v6",
-  balances:"glz_saldos_caixa_v6"
+  apartments:"glz_apartamentos_caixa_v7",
+  receipts:"glz_receitas_caixa_v7",
+  expenses:"glz_despesas_caixa_v7",
+  seq:"glz_seq_caixa_v7",
+  balances:"glz_saldos_caixa_v7"
 };
 const OLD_KEYS = {
-  apartments:["glz_apartamentos_caixa_v5","glz_apartamentos_caixa_v4"],
-  receipts:["glz_receitas_caixa_v5","glz_receitas_caixa_v4"],
-  expenses:["glz_despesas_caixa_v5","glz_despesas_caixa_v4"],
-  balances:["glz_saldos_caixa_v5","glz_saldos_caixa_v4"],
-  seq:["glz_seq_caixa_v5","glz_seq_caixa_v4"]
+  apartments:["glz_apartamentos_caixa_v6","glz_apartamentos_caixa_v5","glz_apartamentos_caixa_v4"],
+  receipts:["glz_receitas_caixa_v6","glz_receitas_caixa_v5","glz_receitas_caixa_v4"],
+  expenses:["glz_despesas_caixa_v6","glz_despesas_caixa_v5","glz_despesas_caixa_v4"],
+  balances:["glz_saldos_caixa_v6","glz_saldos_caixa_v5","glz_saldos_caixa_v4"],
+  seq:["glz_seq_caixa_v6","glz_seq_caixa_v5","glz_seq_caixa_v4"]
 };
 const state = { apartments:[], receipts:[], expenses:[], balances:{} };
 
@@ -116,7 +116,9 @@ function initData(){
   const byId = new Map(aps.map(a=>[a.id || a.name, a]));
   const finalAps = APTOS.map(ap=>{
     const old = byId.get(ap) || {};
-    return { id:ap, name:ap, residentName: old.residentName || old.ownerName || NOMES_PADRAO[ap] || "", exempt: ap===FIXOS.isento, obs: old.obs || old.note || OBS_PADRAO[ap] || "" };
+    const savedName = old.residentName || old.ownerName || "";
+    const finalName = savedName || NOMES_PADRAO[ap] || "";
+    return { id:ap, name:ap, residentName: finalName, exempt: ap===FIXOS.isento, obs: old.obs || old.note || OBS_PADRAO[ap] || "" };
   });
   setApartments(finalAps);
   const recs = loadWithOld(STORAGE.receipts, OLD_KEYS.receipts, []);
@@ -271,14 +273,14 @@ function renderPrestacao(){
   const data = filteredPeriodItems();
   const b = getBalanceForPeriod();
   const t = calcTotals(data.rec, data.exp);
-  const expected = Number(b.initial||0) + t.received - t.spent;
+  const expected = t.received - t.spent;
   const real = Number(b.real||0);
   const diff = real - expected;
   const cls = diff >= 0 ? "positivo" : "negativo";
   const periodo = monthYear(data.period.startM,data.period.startY) + " até " + monthYear(data.period.endM,data.period.endY);
   qs("#prestResumo").innerHTML = `
     <div class="resumoCard"><div class="label">Período</div><div class="value">${periodo}</div></div>
-    <div class="resumoCard"><div class="label">Saldo inicial</div><div class="value">${money(b.initial)}</div></div>
+    <div class="resumoCard"><div class="label">Saldo inicial</div><div class="value">R$ 0,00</div></div>
     <div class="resumoCard"><div class="label">Total recebido</div><div class="value positivo">${money(t.received)}</div></div>
     <div class="resumoCard"><div class="label">Total despesas</div><div class="value negativo">${money(t.spent)}</div></div>
     <div class="resumoCard"><div class="label">Quanto deveria existir</div><div class="value">${money(expected)}</div></div>
@@ -401,9 +403,8 @@ function statementPDF(all){
   let rec, exp, title, b={initial:0,real:0}, p=null;
   if(all){ rec = state.receipts.slice(); exp = state.expenses.slice(); title = "PRESTAÇÃO DE CONTAS COMPLETA"; }
   else { const data = filteredPeriodItems(); rec=data.rec; exp=data.exp; p=data.period; b=getBalanceForPeriod(); title = `PRESTAÇÃO DE CONTAS — ${monthYear(p.startM,p.startY)} até ${monthYear(p.endM,p.endY)}`; }
-  const t = calcTotals(rec, exp), expected = Number(b.initial||0)+t.received-t.spent, real=Number(b.real||0), diff=real-expected;
+  const t = calcTotals(rec, exp), expected = t.received-t.spent, real=Number(b.real||0), diff=real-expected;
   const doc = new jsPDF({unit:"mm", format:"a4"}); let y = pdfHead(doc,title);
-  y=addLine(doc, `Saldo inicial: ${money(b.initial)}`, y, 12);
   y=addLine(doc, `Total recebido: ${money(t.received)}`, y, 12);
   y=addLine(doc, `Total despesas: ${money(t.spent)}`, y, 12);
   y=addLine(doc, `Quanto deveria existir: ${money(expected)}`, y, 12);
